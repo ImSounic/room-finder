@@ -1,0 +1,20 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Dependencies & build output
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+
+# Playwright
+playwright-report/
+test-results/
+.auth/
+
+
+# Misc
+.DS_Store
+*.log
