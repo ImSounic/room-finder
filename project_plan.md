@@ -49,7 +49,7 @@ Adapter architecture: every source is one self-contained module implementing a c
 
 | # | Source | Phase | Fetch method | Apply strategy |
 |---|---|---|---|---|
-| 1 | **Roomspot.nl** (De Veste / Veste Wonen — Twente student housing; verify exact domain/flow against live site as first implementation step) | 1 | Playwright (login as Sounic — legitimate registered tenant) | **Auto-respond** (Phase 3). Response model is queue/points-based, so responding promptly to every match is the correct strategy. |
+| 1 | ~~Roomspot.nl~~ (removed — handled manually) | — | — | User applies directly on the portal. |
 | 2 | **Pararius.nl** | 1 | Plain HTTP + HTML parse (public, no login) | No on-site apply → **scrape agent name/phone/email + listing URL**, surface in alert + dashboard. Optional Phase 3: templated email via Gmail. |
 | 3 | **HousingAnywhere.com** | ✅ live | HTTP (embedded router-hydration JSON) | Contact via cross-reference only (on-platform messaging not scraped). |
 | 4 | **Kamernet.nl** | ✅ live | HTTP (embedded __NEXT_DATA__ JSON; Playwright fallback if blocked) | Alert-only; contact via address cross-reference to free sources (paywall never scraped). |

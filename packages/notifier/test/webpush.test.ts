@@ -3,7 +3,7 @@ import { buildPushPayload, deadEndpoints } from "../src/webpush.js";
 import type { Listing } from "@rf/core";
 
 const l: Listing = {
-  source: "roomspot", externalId: "1", url: "https://roomspot.nl/x", title: "Calslaan 1, Enschede",
+  source: "kamernet", externalId: "1", url: "https://kamernet.nl/x", title: "Calslaan 1, Enschede",
   price: 650, bills: "incl", type: "studio", furnished: "yes", area: "Calslaan", postalcode: null,
   availableFrom: "2026-08-01", contact: null, raw: {}, score: 88,
 };

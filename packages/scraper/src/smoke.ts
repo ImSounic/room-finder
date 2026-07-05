@@ -1,9 +1,8 @@
-import { roomspotAdapter, parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter } from "@rf/adapters";
+import { parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter } from "@rf/adapters";
 import { matchesCriteria, scoreListing } from "@rf/core";
 import type { SourceAdapter } from "@rf/core";
 
 const adapters: Record<string, SourceAdapter> = {
-  roomspot: roomspotAdapter,
   pararius: parariusAdapter,
   kamernet: kamernetAdapter,
   kamer: kamerAdapter,

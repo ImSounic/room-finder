@@ -29,7 +29,7 @@ describe("linkByAddress", () => {
   const rows = [
     { id: "a", source: "kamernet", address_key: "7522lh-matenweg-14-208", url: "k", contact: null },
     { id: "b", source: "pararius", address_key: "7522lh-matenweg-14-208", url: "p", contact: { agency: "X", phone: "053" } },
-    { id: "c", source: "roomspot", address_key: "7523dt-fazantstraat-345", url: "r", contact: null },
+    { id: "c", source: "kamer", address_key: "7523dt-fazantstraat-345", url: "r", contact: null },
   ];
   it("finds a free-contact twin for a paywalled listing", () => {
     const link = linkByAddress(rows[0], rows);

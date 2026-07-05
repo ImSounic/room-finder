@@ -10,7 +10,7 @@ const raw = (id: string, over: Partial<RawListing> = {}): RawListing => ({
 
 describe("processListings", () => {
   it("scores and stamps source, keeping non-matches with isMatch false", () => {
-    const out = processListings("roomspot", [
+    const out = processListings("kamernet", [
       raw("keep"),
       raw("too-expensive", { price: 1400 }),
       raw("shared", { type: "room-shared" }),
@@ -20,7 +20,7 @@ describe("processListings", () => {
     expect(out.find((l) => l.externalId === "too-expensive")!.isMatch).toBe(false);
     expect(out.find((l) => l.externalId === "shared")!.isMatch).toBe(false);
     const keep = out.find((l) => l.externalId === "keep")!;
-    expect(keep.source).toBe("roomspot");
+    expect(keep.source).toBe("kamernet");
     expect(keep.score).toBeGreaterThan(0);
   });
   it("sorts by score descending", () => {
@@ -31,7 +31,7 @@ describe("processListings", () => {
     expect(out[0].externalId).toBe("cheap-campus");
   });
   it("stamps an address key from title + postalcode", () => {
-    const out = processListings("roomspot", [
+    const out = processListings("kamernet", [
       raw("with-number", { title: "Matenweg 14 208, Enschede", postalcode: "7522 LH" }),
       raw("no-number", { title: "Spelbergsweg, Enschede", postalcode: "7522 AB" }),
     ]);

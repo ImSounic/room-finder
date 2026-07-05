@@ -123,8 +123,7 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
           <div className="mb-2 text-3xl" aria-hidden>🔭</div>
           <p className="font-medium">No matches here right now</p>
           <p className="mt-1 text-sm text-muted">
-            The scrapers check Roomspot every 5 minutes and Pararius every 15 —
-            new matches appear here instantly and ping your phone.
+            New matches appear here the moment they're found and ping your phone.
             {filter.minScore || filter.source || (filter.category && filter.category !== "all") ? " Try loosening the filters above." : ""}
           </p>
         </div>
