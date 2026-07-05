@@ -20,3 +20,31 @@ describe("parsePararius", () => {
     for (const l of priced) expect(l.price).toBeGreaterThan(100);
   });
 });
+
+describe("defensive parsing", () => {
+  it("returns [] for non-HTML / empty input", () => {
+    expect(parsePararius("")).toEqual([]);
+    expect(parsePararius("not html at all")).toEqual([]);
+  });
+  it("skips card with no title link", () => {
+    const html = '<section class="listing-search-item"><div class="listing-search-item__price">€ 500 per maand</div></section>';
+    expect(parsePararius(html)).toEqual([]);
+  });
+  it("skips card with title link but empty title text", () => {
+    const html = '<section class="listing-search-item"><a class="listing-search-item__link--title" href="/kamer-te-huur/enschede/abc12345/teststraat">   </a></section>';
+    expect(parsePararius(html)).toEqual([]);
+  });
+  it("handles unparseable price and returns null with bills=unknown", () => {
+    const html = '<section class="listing-search-item"><a class="listing-search-item__link--title" href="/studio-te-huur/enschede/def67890/anderestraat">Studio Anderestraat</a><div class="listing-search-item__price">Prijs op aanvraag</div></section>';
+    const listings = parsePararius(html);
+    expect(listings.length).toBe(1);
+    expect(listings[0].price).toBeNull();
+    expect(listings[0].bills).toBe("unknown");
+  });
+  it("parses thousands separator in price", () => {
+    const html = '<section class="listing-search-item"><a class="listing-search-item__link--title" href="/studio-te-huur/enschede/def67890/anderestraat">Studio Anderestraat</a><div class="listing-search-item__price">€ 1.250 per maand</div></section>';
+    const listings = parsePararius(html);
+    expect(listings.length).toBe(1);
+    expect(listings[0].price).toBe(1250);
+  });
+});
