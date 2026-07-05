@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { Contact, Listing, RawListing, SourceAdapter, UnitType, Furnished } from "@rf/core";
-import { withPage, withBrowserPages } from "./browser.js";
+import { withPage } from "./browser.js";
 
 // Cloudflare-fronted: plain fetch returns 403, so fetchListings goes through
 // Playwright (see browser.ts). Search URL is Enschede, max €950.
@@ -94,32 +94,35 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** For up to `limit` matched listings, open their Pararius detail page and
  *  fill in `contact` from the publicly displayed agent block. Each listing is
- *  isolated (a failure on one doesn't affect the others) and left with
- *  contact: null on failure. Pages are opened sequentially in one browser,
- *  with a polite pause between them. */
+ *  fetched in its OWN fresh browser context (via withPage): against
+ *  Cloudflare, reusing one context across sequential navigations gets later
+ *  requests served a challenge interstitial, so most listings after the
+ *  first 1-2 would silently come back with no contact. A fresh context per
+ *  listing avoids that. Each listing is isolated (a failure on one doesn't
+ *  affect the others) and left with contact: null on failure, with a polite
+ *  pause between listings. */
 export async function enrichParariusContacts(listings: RawListing[], limit = 30): Promise<RawListing[]> {
   const targets = listings.slice(0, limit);
   const rest = listings.slice(limit);
-  const enriched = await withBrowserPages(async (newPage) => {
-    const out: RawListing[] = [];
-    for (const listing of targets) {
-      try {
-        const page = await newPage();
-        try {
-          await page.goto(listing.url, { waitUntil: "domcontentloaded" });
-          const html = await page.content();
-          out.push({ ...listing, contact: parseParariusContact(html) });
-        } finally {
-          await page.close();
-        }
-      } catch {
-        out.push({ ...listing, contact: null });
-      }
-      await sleep(1000 + Math.random() * 1000);
+  const out: RawListing[] = [];
+  for (let i = 0; i < targets.length; i++) {
+    const listing = targets[i];
+    let contact = listing.contact;
+    try {
+      const html = await withPage(async (page) => {
+        await page.goto(listing.url, { waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForTimeout(2500); // let Cloudflare JS challenge settle
+        return page.content();
+      });
+      const parsed = parseParariusContact(html);
+      if (parsed) contact = parsed;
+    } catch {
+      // keep existing contact (usually null); isolated per listing
     }
-    return out;
-  });
-  return [...enriched, ...rest];
+    out.push({ ...listing, contact });
+    if (i < targets.length - 1) await sleep(1000 + Math.floor(Math.random() * 1000));
+  }
+  return [...out, ...rest];
 }
 
 export const parariusAdapter: SourceAdapter = {

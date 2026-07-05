@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { Contact, Furnished, Listing, RawListing, SourceAdapter, UnitType } from "@rf/core";
-import { withPage, withBrowserPages } from "./browser.js";
+import { withPage } from "./browser.js";
 
 // Cloudflare-fronted: curl with a browser UA passed recon, but Node's
 // undici fetch (any headers) is challenged with a 403 "Just a moment..."
@@ -124,34 +124,36 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** For up to `limit` matched listings, open their kamer.nl detail page and
  *  fill in `contact` from the publicly displayed agency/broker block (in
  *  practice this is currently always null — see parseKamerContact). Each
- *  listing is isolated (a failure on one doesn't affect the others) and left
- *  with contact: null on failure. Pages are opened sequentially in one
- *  browser (kamer.nl is Cloudflare TLS-fingerprinted, so plain fetch is
- *  blocked — detail fetches must go through Playwright), with a polite pause
- *  between them. */
+ *  listing is fetched in its OWN fresh browser context (via withPage):
+ *  kamer.nl is Cloudflare TLS-fingerprinted like pararius, and reusing one
+ *  context across sequential navigations risks later requests being served a
+ *  challenge interstitial, so most listings after the first 1-2 would
+ *  silently come back with no contact. A fresh context per listing avoids
+ *  that. Each listing is isolated (a failure on one doesn't affect the
+ *  others) and left with contact: null on failure, with a polite pause
+ *  between listings. */
 export async function enrichKamerContacts(listings: RawListing[], limit = 30): Promise<RawListing[]> {
   const targets = listings.slice(0, limit);
   const rest = listings.slice(limit);
-  const enriched = await withBrowserPages(async (newPage) => {
-    const out: RawListing[] = [];
-    for (const listing of targets) {
-      try {
-        const page = await newPage();
-        try {
-          await page.goto(listing.url, { waitUntil: "domcontentloaded" });
-          const html = await page.content();
-          out.push({ ...listing, contact: parseKamerContact(html) });
-        } finally {
-          await page.close();
-        }
-      } catch {
-        out.push({ ...listing, contact: null });
-      }
-      await sleep(1000 + Math.random() * 1000);
+  const out: RawListing[] = [];
+  for (let i = 0; i < targets.length; i++) {
+    const listing = targets[i];
+    let contact = listing.contact;
+    try {
+      const html = await withPage(async (page) => {
+        await page.goto(listing.url, { waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForTimeout(2500); // let Cloudflare JS challenge settle
+        return page.content();
+      });
+      const parsed = parseKamerContact(html);
+      if (parsed) contact = parsed;
+    } catch {
+      // keep existing contact (usually null); isolated per listing
     }
-    return out;
-  });
-  return [...enriched, ...rest];
+    out.push({ ...listing, contact });
+    if (i < targets.length - 1) await sleep(1000 + Math.floor(Math.random() * 1000));
+  }
+  return [...out, ...rest];
 }
 
 export const kamerAdapter: SourceAdapter = {
