@@ -205,8 +205,11 @@ export async function enrichKamernetListings(listings: Listing[], limit = 30): P
       });
       const f = parseKamernetDetail(html);
       const patch: Partial<Listing> = {};
+      // Promote a shared room to private-bath when the detail page shows a private/own bathroom.
+      // Never fabricate "studio" here — a private bath+kitchen room in a shared house isn't a
+      // self-contained studio; real studios are already typed by the search-payload listingType.
       if (f.bathroom === "private" && l.type === "room-shared") {
-        patch.type = f.kitchen === "private" ? "studio" : "room-private-bath";
+        patch.type = "room-private-bath";
       }
       if (f.furnished !== "unknown") patch.furnished = f.furnished;
       next = { ...l, ...patch };
