@@ -113,4 +113,7 @@ for (const adapter of adapters) {
   }
 }
 
-if (adapterFailures > 0) process.exitCode = 1;
+// Red the workflow only if EVERY adapter failed (systemic). A single transient
+// source failure is expected for best-effort scraping — the per-source health
+// check (Discord) is the real signal.
+if (adapterFailures > 0 && adapterFailures === adapters.length) process.exitCode = 1;

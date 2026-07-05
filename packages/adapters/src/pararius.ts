@@ -125,15 +125,31 @@ export async function enrichParariusContacts(listings: RawListing[], limit = 30)
   return [...out, ...rest];
 }
 
+/** Fetch the search-page HTML, retrying once in a fresh browser context if
+ *  the first attempt times out (e.g. a slow Cloudflare challenge from a CI
+ *  datacenter IP). Throws if both attempts fail, so the adapter is still
+ *  logged as failed in that case. */
+async function fetchSearchHtml(url: string, selector: string): Promise<string> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await withPage(async (page) => {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+        await page.waitForSelector(selector, { timeout: 45000 });
+        return page.content();
+      });
+    } catch (err) {
+      if (attempt === 2) throw err;
+      await sleep(3000);
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export const parariusAdapter: SourceAdapter = {
   name: "pararius",
   kind: "browser",
   async fetchListings() {
-    const html = await withPage(async (page) => {
-      await page.goto(SEARCH_URL, { waitUntil: "domcontentloaded" });
-      await page.waitForSelector("section.listing-search-item", { timeout: 20000 });
-      return page.content();
-    });
+    const html = await fetchSearchHtml(SEARCH_URL, "section.listing-search-item");
     return parsePararius(html);
   },
   async enrichListings(listings: Listing[]): Promise<Listing[]> {
