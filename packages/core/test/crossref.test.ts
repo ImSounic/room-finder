@@ -14,6 +14,15 @@ describe("addressKey", () => {
   it("returns null for null street", () => {
     expect(addressKey(null, "7522 LH")).toBeNull();
   });
+  it("strips leading listing-type words so sources with different title prefixes match", () => {
+    expect(addressKey("Studio Spelbergsweg 12", "7522 AB")).toBe(addressKey("Spelbergsweg 12", "7522 AB"));
+    expect(addressKey("Appartement Matenweg 14", "7522 LH")).toBe(addressKey("Matenweg 14", "7522 LH"));
+    expect(addressKey("Kamer Janninksweg 3", "7511 AA")).toBe(addressKey("janninksweg 3", "7511 AA"));
+  });
+  it("does not strip a type word that is part of the real street name", () => {
+    // "Studioweg" is one token, not the prefix "Studio" — must stay intact
+    expect(addressKey("Studioweg 5", "7500 AA")).not.toBe(addressKey("weg 5", "7500 AA"));
+  });
 });
 
 describe("linkByAddress", () => {

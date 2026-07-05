@@ -1,11 +1,16 @@
 const PAYWALLED = new Set(["kamernet"]);
 
-/** Stable key from postcode + street + house number(s). null if no house number to anchor on. */
+/** Stable key from postcode + street + house number(s). null if no house number to anchor on.
+ *  Leading listing-type words (Studio/Kamer/Appartement…) are stripped so the same house keys
+ *  identically across sources that prefix the type onto the street. */
 export function addressKey(street: string | null, postalcode: string | null): string | null {
   if (!street) return null;
   const nums = street.match(/\d+/g);
   if (!nums) return null;
-  const streetName = street.toLowerCase().replace(/\d+/g, " ").replace(/[^a-z]+/g, " ").trim().replace(/\s+/g, "-");
+  let streetName = street.toLowerCase().replace(/\d+/g, " ").replace(/[^a-z]+/g, " ").trim().replace(/\s+/g, "-");
+  const TYPE_PREFIX = /^(studio|kamer|appartement|apartment|woning|huis|room|flat|studios)-/;
+  const stripped = streetName.replace(TYPE_PREFIX, "");
+  streetName = stripped.length > 0 ? stripped : streetName;
   const pc = (postalcode ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
   return `${pc}-${streetName}-${nums.join("-")}`;
 }
