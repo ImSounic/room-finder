@@ -1,6 +1,13 @@
 import { roomspotAdapter, parariusAdapter } from "@rf/adapters";
-import { buildAlertPayload, sendDiscord } from "@rf/notifier";
-import { insertNewListings, isSourceUnhealthy, logSourceRun, supabaseFromEnv } from "@rf/core";
+import { buildAlertPayload, sendDiscord, buildPushPayload, sendPush, deadEndpoints } from "@rf/notifier";
+import {
+  insertNewListings,
+  isSourceUnhealthy,
+  logSourceRun,
+  supabaseFromEnv,
+  getActivePushSubscriptions,
+  deletePushSubscriptions,
+} from "@rf/core";
 import type { SourceAdapter } from "@rf/core";
 import { processListings } from "./pipeline.js";
 
@@ -51,6 +58,19 @@ for (const adapter of adapters) {
           alertFailures++;
         }
         await sleep(ALERT_DELAY_MS);
+      }
+    }
+    // Web push to the dashboard (same new listings). No-op if no subscriptions / VAPID unset.
+    if (inserted.length > 0) {
+      const subs = await getActivePushSubscriptions(db);
+      if (subs.length > 0) {
+        for (const row of inserted) {
+          const listing = byId.get(row.external_id);
+          if (!listing) continue;
+          const results = await sendPush(subs, buildPushPayload(listing));
+          const dead = deadEndpoints(results);
+          if (dead.length > 0) await deletePushSubscriptions(db, dead);
+        }
       }
     }
     await logSourceRun(db, { source: adapter.name, ok: true,
