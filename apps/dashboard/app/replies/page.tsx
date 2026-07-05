@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/Nav";
 import { SourceHealthBar } from "@/components/SourceHealthBar";
 import { AddReply } from "@/components/AddReply";
+import { timeAgo } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +22,32 @@ export default async function RepliesPage() {
     <>
       <Nav />
       <SourceHealthBar />
-      <div className="p-4">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-2">
         <AddReply applications={appOpts} />
-        <div className="flex flex-col gap-2">
-          {rows.length === 0 && <p className="text-neutral-500 text-sm">No replies logged.</p>}
-          {rows.map((r) => (
-            <div key={r.id} className="rounded-lg border p-3 text-sm">
-              <div className="text-xs text-neutral-500">
-                {r.applications?.listings?.title ?? "?"} · {r.channel} · {new Date(r.received_at).toLocaleString()}
+        {rows.length === 0 ? (
+          <div className="mx-auto mt-8 max-w-md rounded-(--radius-card) border border-dashed border-line bg-surface/50 p-8 text-center">
+            <div className="mb-2 text-3xl" aria-hidden>💬</div>
+            <p className="font-medium">No replies logged</p>
+            <p className="mt-1 text-sm text-muted">
+              {appOpts.length === 0
+                ? "Once you've applied to a listing, log landlord replies here to keep the whole conversation in one place."
+                : "When a landlord answers, log it above — future you will thank present you."}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {rows.map((r) => (
+              <div key={r.id} className="rounded-(--radius-card) border border-line bg-bg p-4 shadow-(--shadow-card)">
+                <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted">
+                  <span className="font-semibold text-ink">{r.applications?.listings?.title ?? "?"}</span>
+                  <span className="rounded-md bg-surface px-1.5 py-0.5 font-medium">{r.channel}</span>
+                  <span>{timeAgo(r.received_at)}</span>
+                </div>
+                {r.body && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{r.body}</p>}
               </div>
-              {r.body && <div className="mt-1 whitespace-pre-wrap">{r.body}</div>}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

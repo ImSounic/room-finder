@@ -3,6 +3,7 @@ import { Nav } from "@/components/Nav";
 import { SourceHealthBar } from "@/components/SourceHealthBar";
 import { StatusPicker } from "@/components/StatusPicker";
 import { priceLabel, type ListingView } from "@rf/core";
+import { timeAgo } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -22,21 +23,35 @@ export default async function AppliedPage() {
     <>
       <Nav />
       <SourceHealthBar />
-      <div className="p-4 flex flex-col gap-2">
-        {rows.length === 0 && <p className="text-neutral-500 text-sm">No applications yet.</p>}
-        {rows.map((a) => (
-          <div key={a.id} className="rounded-lg border p-3 flex items-center justify-between gap-3">
-            <div>
-              <a href={a.listings?.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">
-                {a.listings?.title ?? "(listing removed)"}
-              </a>
-              <div className="text-xs text-neutral-500">
-                {a.listings ? `${priceLabel(a.listings)} · ${a.listings.source}` : ""} · {a.method} · {new Date(a.applied_at).toLocaleDateString()}
-              </div>
-            </div>
-            <StatusPicker applicationId={a.id} initial={a.status} />
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-2">
+        {rows.length === 0 ? (
+          <div className="mx-auto mt-8 max-w-md rounded-(--radius-card) border border-dashed border-line bg-surface/50 p-8 text-center">
+            <div className="mb-2 text-3xl" aria-hidden>📮</div>
+            <p className="font-medium">Nothing applied yet</p>
+            <p className="mt-1 text-sm text-muted">
+              Hit “Mark applied” on a listing and it lands here, so you can track
+              every application from sent to offer.
+            </p>
           </div>
-        ))}
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {rows.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-3 rounded-(--radius-card) border border-line bg-bg p-4 shadow-(--shadow-card)">
+                <div className="min-w-0">
+                  <a href={a.listings?.url} target="_blank" rel="noreferrer" className="font-semibold hover:text-primary hover:underline">
+                    {a.listings?.title ?? "(listing removed)"}
+                  </a>
+                  <div className="mt-0.5 text-xs text-muted">
+                    {a.listings ? `${priceLabel(a.listings)} · ${a.listings.source} · ` : ""}
+                    applied {timeAgo(a.applied_at)}
+                    {a.method !== "manual" ? ` · ${a.method}` : ""}
+                  </div>
+                </div>
+                <StatusPicker applicationId={a.id} initial={a.status} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

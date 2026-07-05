@@ -2,7 +2,15 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const STATUSES = ["sent", "replied", "viewing", "offer", "rejected"];
+const STATUSES = ["sent", "replied", "viewing", "offer", "rejected"] as const;
+
+const TONE: Record<string, string> = {
+  sent: "bg-surface text-muted border-line",
+  replied: "bg-primary-soft text-primary border-transparent",
+  viewing: "bg-accent-soft text-accent border-transparent",
+  offer: "bg-accent text-white border-transparent",
+  rejected: "bg-surface-2 text-muted border-transparent line-through",
+};
 
 export function StatusPicker({ applicationId, initial }: { applicationId: string; initial: string }) {
   const [status, setStatus] = useState(initial);
@@ -17,11 +25,16 @@ export function StatusPicker({ applicationId, initial }: { applicationId: string
   }
   return (
     <span className="flex flex-col items-end gap-1">
-      <select className="rounded border p-1 text-xs bg-transparent" value={status} disabled={busy}
-        onChange={(e) => change(e.target.value)}>
+      <select
+        aria-label="application status"
+        className={`min-h-9 cursor-pointer rounded-full border px-3 text-xs font-semibold transition-colors duration-150 disabled:opacity-50 ${TONE[status] ?? TONE.sent}`}
+        value={status}
+        disabled={busy}
+        onChange={(e) => change(e.target.value)}
+      >
         {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-danger" role="alert">Couldn’t save — {error}</span>}
     </span>
   );
 }

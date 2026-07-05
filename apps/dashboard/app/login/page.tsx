@@ -22,18 +22,48 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-sm p-6 pt-20">
-      <h1 className="text-2xl font-semibold mb-6">Room Finder</h1>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <input className="rounded border p-2 bg-transparent" type="email" placeholder="email"
-          value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="rounded border p-2 bg-transparent" type="password" placeholder="password"
-          value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <button className="rounded bg-blue-600 text-white p-2 disabled:opacity-50" disabled={busy}>
-          {busy ? "…" : "Sign in"}
-        </button>
-      </form>
+    <main className="grid min-h-screen place-items-center bg-surface p-6">
+      <div className="w-full max-w-sm rounded-(--radius-card) border border-line bg-bg p-8 shadow-(--shadow-lift)">
+        <div className="mb-6 flex items-center gap-3">
+          <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-xl text-primary-ink">⌂</span>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Room Finder</h1>
+            <p className="text-sm text-muted">Let’s find you a home in Enschede.</p>
+          </div>
+        </div>
+        <form onSubmit={onSubmit} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Email
+            <input
+              className="min-h-11 rounded-(--radius-control) border border-line bg-bg px-3 text-base placeholder:text-muted"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Password
+            <input
+              className="min-h-11 rounded-(--radius-control) border border-line bg-bg px-3 text-base"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+          <button
+            className="mt-1 min-h-11 rounded-(--radius-control) bg-primary text-sm font-semibold text-primary-ink transition-[filter] duration-150 hover:brightness-110 disabled:opacity-50"
+            disabled={busy}
+          >
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

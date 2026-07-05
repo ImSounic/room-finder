@@ -13,9 +13,18 @@ export function PushToggle() {
     catch (e) { setErr(e instanceof Error ? e.message : "failed"); }
   }
   return (
-    <button onClick={toggle} title={err ?? ""}
-      className="ml-auto rounded border px-2 py-0.5 text-xs">
-      {err ? "⚠️ " : ""}{on ? "🔔 push on" : "🔕 enable push"}
+    <button
+      onClick={toggle}
+      title={err ?? (on ? "Push notifications are on" : "Get pinged when a new match lands")}
+      aria-pressed={on}
+      className={`ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors duration-150 ${
+        on
+          ? "border-transparent bg-primary-soft text-primary"
+          : "border-line text-muted hover:bg-surface hover:text-ink"
+      }`}
+    >
+      <span aria-hidden>{err ? "⚠️" : on ? "🔔" : "🔕"}</span>
+      <span className="hidden sm:inline">{on ? "Push on" : "Enable push"}</span>
     </button>
   );
 }
