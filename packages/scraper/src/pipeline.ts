@@ -11,3 +11,10 @@ export function processListings(source: string, raws: RawListing[]): Listing[] {
     }))
     .sort((a, b) => b.score - a.score);
 }
+
+/** Re-derive isMatch + score from a listing's current fields. Needed after
+ *  enrichment, since detail-page data (e.g. Kamernet's bathroom/kitchen
+ *  facility text) can change `type`, which feeds matchesCriteria/scoreListing. */
+export function recomputeMatch(l: Listing): Listing {
+  return { ...l, isMatch: matchesCriteria(l).pass, score: scoreListing(l) };
+}

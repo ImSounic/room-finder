@@ -10,7 +10,7 @@ import {
   existingExternalIds,
 } from "@rf/core";
 import type { SourceAdapter } from "@rf/core";
-import { processListings } from "./pipeline.js";
+import { processListings, recomputeMatch } from "./pipeline.js";
 
 // Discord webhook rate limit headroom (~30 req/min): pace the backfill burst
 const ALERT_DELAY_MS = 350;
@@ -55,7 +55,9 @@ for (const adapter of adapters) {
         const byExt = new Map(enriched.map((l) => [l.externalId, l]));
         for (let i = 0; i < processed.length; i++) {
           const e = byExt.get(processed[i].externalId);
-          if (e) processed[i] = e;
+          // type/furnished may have changed (e.g. Kamernet bathroom detail) → re-evaluate match+score.
+          // No-op for adapters whose enrichment only touches contact (e.g. Pararius).
+          if (e) processed[i] = recomputeMatch(e);
         }
       }
     }

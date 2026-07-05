@@ -1,4 +1,5 @@
-import type { Furnished, RawListing, SourceAdapter, UnitType } from "@rf/core";
+import type { Furnished, Listing, RawListing, SourceAdapter, UnitType } from "@rf/core";
+import { withPage } from "./browser.js";
 
 // Verified 2026-07-05: /en/for-rent/rooms-enschede 301-redirects to this slug.
 const SEARCH = "https://kamernet.nl/en/for-rent/properties-enschede";
@@ -168,12 +169,56 @@ export function parseKamernetDetail(html: string): KnFacilities {
   }
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** For up to `limit` listings, open their Kamernet detail page and refine
+ *  `type`/`furnished` from the publicly rendered facility text. The search
+ *  payload (__NEXT_DATA__) has no bathroom info, so a "room-shared" listing
+ *  is upgraded to "room-private-bath" (or "studio" if the kitchen is also
+ *  private) when the detail page confirms a private/own bathroom. No
+ *  paywall involved — contact stays null; only public facility text is
+ *  read. Each listing gets its own fresh browser context (mirrors Pararius'
+ *  enrichParariusContacts): reusing one context across sequential
+ *  navigations risks later requests being served a Cloudflare-ish
+ *  interstitial. Each listing is isolated — a failure keeps the original. */
+export async function enrichKamernetListings(listings: Listing[], limit = 30): Promise<Listing[]> {
+  const targets = listings.slice(0, limit);
+  const rest = listings.slice(limit);
+  const out: Listing[] = [];
+  for (let i = 0; i < targets.length; i++) {
+    const l = targets[i];
+    let next = l;
+    try {
+      const html = await withPage(async (page) => {
+        await page.goto(l.url, { waitUntil: "domcontentloaded", timeout: 45000 });
+        await page.waitForTimeout(2500);
+        return page.content();
+      });
+      const f = parseKamernetDetail(html);
+      const patch: Partial<Listing> = {};
+      if (f.bathroom === "private" && l.type === "room-shared") {
+        patch.type = f.kitchen === "private" ? "studio" : "room-private-bath";
+      }
+      if (f.furnished !== "unknown") patch.furnished = f.furnished;
+      next = { ...l, ...patch };
+    } catch {
+      // keep original; isolated per listing
+    }
+    out.push(next);
+    if (i < targets.length - 1) await sleep(1000 + Math.floor(Math.random() * 1000));
+  }
+  return [...out, ...rest];
+}
+
 export const kamernetAdapter: SourceAdapter = {
   name: "kamernet",
-  kind: "http",
+  kind: "browser",
   async fetchListings(ctx) {
     const res = await ctx.fetch(SEARCH, { headers: { "User-Agent": UA } });
     if (!res.ok) throw new Error(`kamernet HTTP ${res.status}`);
     return parseKamernet(await res.text());
+  },
+  async enrichListings(listings) {
+    return enrichKamernetListings(listings);
   },
 };

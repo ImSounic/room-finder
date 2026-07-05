@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { processListings } from "../src/pipeline.js";
+import { processListings, recomputeMatch } from "../src/pipeline.js";
 import type { RawListing } from "@rf/core";
 
 const raw = (id: string, over: Partial<RawListing> = {}): RawListing => ({
@@ -43,5 +43,12 @@ describe("processListings", () => {
       raw("ha", { title: "Private room on Getfertsingel 45, Enschede", postalcode: "7513 AB", streetAddress: "Getfertsingel 45" }),
     ]);
     expect(out[0].addressKey).toBe("7513ab-getfertsingel-45");
+  });
+  it("recomputeMatch flips a room to a match after type upgrade", () => {
+    const shared = processListings("kamernet", [raw("r", { type: "room-shared", price: 600, title: "Janninksweg 1, Enschede", postalcode: "7511 AA" })])[0];
+    expect(shared.isMatch).toBe(false);
+    const upgraded = recomputeMatch({ ...shared, type: "room-private-bath" });
+    expect(upgraded.isMatch).toBe(true);
+    expect(upgraded.score).toBeGreaterThan(shared.score);
   });
 });
