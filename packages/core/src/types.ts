@@ -41,9 +41,9 @@ export interface SourceAdapter {
   name: string;
   kind: "http" | "browser";
   fetchListings(ctx: AdapterCtx): Promise<RawListing[]>;
-  /** Optional: enrich already-matched listings (e.g. fetch detail pages for
-   *  contact info) before they're inserted. Runs on matches only, after
-   *  scoring/filtering, so adapters can do expensive per-listing work
-   *  without paying the cost for non-matching listings. */
-  enrichMatches?(listings: Listing[]): Promise<Listing[]>;
+  /** Optional: enrich listings (e.g. fetch detail pages for contact info)
+   *  before they're inserted. Called once per listing — only for listings
+   *  new to the DB (first sighting), regardless of match — since contact
+   *  info doesn't change, so it's never re-fetched on later runs. */
+  enrichListings?(listings: Listing[]): Promise<Listing[]>;
 }

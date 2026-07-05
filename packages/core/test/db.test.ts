@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { insertNewListings, isSourceUnhealthy } from "../src/db.js";
+import { insertNewListings, isSourceUnhealthy, existingExternalIds } from "../src/db.js";
 import type { Listing } from "../src/types.js";
 
 const l = (id: string, addressKey?: string | null): Listing => ({
@@ -39,6 +39,48 @@ describe("insertNewListings", () => {
   it("returns [] for empty input without touching the client", async () => {
     const inserted = await insertNewListings(null as never, []);
     expect(inserted).toEqual([]);
+  });
+});
+
+describe("existingExternalIds", () => {
+  it("returns [] without touching the client for empty ids", async () => {
+    const result = await existingExternalIds(null as never, "test", []);
+    expect(result).toEqual(new Set());
+  });
+  it("returns a Set of only the ids that already exist", async () => {
+    const fakeDb = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            in: () => Promise.resolve({
+              data: [{ external_id: "a" }, { external_id: "c" }],
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    };
+    const result = await existingExternalIds(fakeDb as never, "test", ["a", "b", "c"]);
+    expect(result).toEqual(new Set(["a", "c"]));
+  });
+  it("returns empty Set and logs when the query errors", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fakeDb = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            in: () => Promise.resolve({
+              data: null,
+              error: { message: "boom" },
+            }),
+          }),
+        }),
+      }),
+    };
+    const result = await existingExternalIds(fakeDb as never, "test", ["a"]);
+    expect(result).toEqual(new Set());
+    expect(consoleErrorSpy).toHaveBeenCalledWith("existingExternalIds query failed: boom");
+    consoleErrorSpy.mockRestore();
   });
 });
 

@@ -7,6 +7,7 @@ import {
   supabaseFromEnv,
   getActivePushSubscriptions,
   deletePushSubscriptions,
+  existingExternalIds,
 } from "@rf/core";
 import type { SourceAdapter } from "@rf/core";
 import { processListings } from "./pipeline.js";
@@ -45,12 +46,17 @@ for (const adapter of adapters) {
     const raws = await adapter.fetchListings({ fetch });
     const processed = processListings(adapter.name, raws);
     const matches = processed.filter((l) => l.isMatch);
-    if (adapter.enrichMatches && matches.length > 0) {
-      const enriched = await adapter.enrichMatches(matches);
-      const byExt = new Map(enriched.map((l) => [l.externalId, l]));
-      for (let i = 0; i < processed.length; i++) {
-        const e = byExt.get(processed[i].externalId);
-        if (e) processed[i] = e;
+    // Enrich only listings new to the DB, once, regardless of match (contact never changes → never re-fetch).
+    if (adapter.enrichListings) {
+      const known = await existingExternalIds(db, adapter.name, processed.map((l) => l.externalId));
+      const fresh = processed.filter((l) => !known.has(l.externalId));
+      if (fresh.length > 0) {
+        const enriched = await adapter.enrichListings(fresh);
+        const byExt = new Map(enriched.map((l) => [l.externalId, l]));
+        for (let i = 0; i < processed.length; i++) {
+          const e = byExt.get(processed[i].externalId);
+          if (e) processed[i] = e;
+        }
       }
     }
     const inserted = await insertNewListings(db, processed);

@@ -97,7 +97,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  *  isolated (a failure on one doesn't affect the others) and left with
  *  contact: null on failure. Pages are opened sequentially in one browser,
  *  with a polite pause between them. */
-export async function enrichParariusContacts(listings: RawListing[], limit = 5): Promise<RawListing[]> {
+export async function enrichParariusContacts(listings: RawListing[], limit = 30): Promise<RawListing[]> {
   const targets = listings.slice(0, limit);
   const rest = listings.slice(limit);
   const enriched = await withBrowserPages(async (newPage) => {
@@ -133,7 +133,7 @@ export const parariusAdapter: SourceAdapter = {
     });
     return parsePararius(html);
   },
-  async enrichMatches(listings: Listing[]): Promise<Listing[]> {
+  async enrichListings(listings: Listing[]): Promise<Listing[]> {
     return (await enrichParariusContacts(listings)) as Listing[];
   },
 };
