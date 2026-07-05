@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import type { RawListing, SourceAdapter, UnitType, Furnished } from "@rf/core";
-import { withPage } from "./browser.js";
+import type { Contact, Listing, RawListing, SourceAdapter, UnitType, Furnished } from "@rf/core";
+import { withPage, withBrowserPages } from "./browser.js";
 
 // Cloudflare-fronted: plain fetch returns 403, so fetchListings goes through
 // Playwright (see browser.ts). Search URL is Enschede, max €950.
@@ -72,6 +72,56 @@ export function parsePararius(html: string): RawListing[] {
   return out;
 }
 
+/** Parse the publicly displayed agent/agency contact block from a Pararius
+ *  DETAIL page. Agency name is always shown; phone is only present when the
+ *  `tel:` link happens to be in the initial HTML (some listings hide it
+ *  behind a "toon telefoonnummer" reveal that isn't in the markup at all —
+ *  we never simulate that click, we just extract what's already there). */
+export function parseParariusContact(html: string): Contact | null {
+  if (!html) return null;
+  const $ = cheerio.load(html);
+  const agency = $(".agent-summary__title-link").first().text().trim().replace(/\s+/g, " ");
+  const telHref = $('a[href^="tel:"]').first().attr("href");
+  const phone = telHref ? telHref.replace(/^tel:\s*/i, "").trim() : undefined;
+  if (!agency && !phone) return null;
+  const contact: Contact = {};
+  if (agency) contact.agency = agency;
+  if (phone) contact.phone = phone;
+  return contact;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** For up to `limit` matched listings, open their Pararius detail page and
+ *  fill in `contact` from the publicly displayed agent block. Each listing is
+ *  isolated (a failure on one doesn't affect the others) and left with
+ *  contact: null on failure. Pages are opened sequentially in one browser,
+ *  with a polite pause between them. */
+export async function enrichParariusContacts(listings: RawListing[], limit = 5): Promise<RawListing[]> {
+  const targets = listings.slice(0, limit);
+  const rest = listings.slice(limit);
+  const enriched = await withBrowserPages(async (newPage) => {
+    const out: RawListing[] = [];
+    for (const listing of targets) {
+      try {
+        const page = await newPage();
+        try {
+          await page.goto(listing.url, { waitUntil: "domcontentloaded" });
+          const html = await page.content();
+          out.push({ ...listing, contact: parseParariusContact(html) });
+        } finally {
+          await page.close();
+        }
+      } catch {
+        out.push({ ...listing, contact: null });
+      }
+      await sleep(1000 + Math.random() * 1000);
+    }
+    return out;
+  });
+  return [...enriched, ...rest];
+}
+
 export const parariusAdapter: SourceAdapter = {
   name: "pararius",
   kind: "browser",
@@ -82,5 +132,8 @@ export const parariusAdapter: SourceAdapter = {
       return page.content();
     });
     return parsePararius(html);
+  },
+  async enrichMatches(listings: Listing[]): Promise<Listing[]> {
+    return (await enrichParariusContacts(listings)) as Listing[];
   },
 };

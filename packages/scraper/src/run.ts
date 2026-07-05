@@ -44,9 +44,10 @@ for (const adapter of adapters) {
   try {
     const raws = await adapter.fetchListings({ fetch });
     const matches = processListings(adapter.name, raws);
-    const inserted = await insertNewListings(db, matches);
+    const enriched = adapter.enrichMatches ? await adapter.enrichMatches(matches) : matches;
+    const inserted = await insertNewListings(db, enriched);
     // Alert ONLY on rows that were actually new (race-proof across overlapping runs)
-    const byId = new Map(matches.map((m) => [m.externalId, m]));
+    const byId = new Map(enriched.map((m) => [m.externalId, m]));
     for (const row of inserted) {
       const listing = byId.get(row.external_id);
       if (listing) {

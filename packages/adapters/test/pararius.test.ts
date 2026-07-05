@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parsePararius } from "../src/pararius.js";
+import { parsePararius, parseParariusContact } from "../src/pararius.js";
 
 const html = readFileSync(new URL("../fixtures/pararius.html", import.meta.url), "utf8");
+const detailHtmlWithPhone = readFileSync(new URL("../fixtures/pararius-detail.html", import.meta.url), "utf8");
+const detailHtmlNoPhone = readFileSync(new URL("../fixtures/pararius-detail-no-phone.html", import.meta.url), "utf8");
 
 describe("parsePararius", () => {
   const listings = parsePararius(html);
@@ -46,5 +48,33 @@ describe("defensive parsing", () => {
     const listings = parsePararius(html);
     expect(listings.length).toBe(1);
     expect(listings[0].price).toBe(1250);
+  });
+});
+
+describe("parseParariusContact", () => {
+  it("extracts agency and phone from a live detail page fixture", () => {
+    const contact = parseParariusContact(detailHtmlWithPhone);
+    expect(contact).not.toBeNull();
+    expect(contact!.agency).toBeDefined();
+    expect(contact!.agency!.length).toBeGreaterThan(2);
+    expect(contact!.phone).toBe("+31534400280");
+  });
+  it("extracts agency without phone when no tel: link is present", () => {
+    const contact = parseParariusContact(detailHtmlNoPhone);
+    expect(contact).not.toBeNull();
+    expect(contact!.agency).toBe("Bakker Vastgoed");
+    expect(contact!.phone).toBeUndefined();
+  });
+  it("extracts agency from synthetic minimal HTML with .agent-summary__title-link", () => {
+    const html = '<section class="agent-summary"><a class="agent-summary__title-link" href="/makelaars/enschede/test-makelaar">Test Makelaar</a></section>';
+    const contact = parseParariusContact(html);
+    expect(contact).not.toBeNull();
+    expect(contact!.agency).toBe("Test Makelaar");
+  });
+  it("returns null for empty html", () => {
+    expect(parseParariusContact("")).toBeNull();
+  });
+  it("returns null when no agent block is present", () => {
+    expect(parseParariusContact("<html><body><p>no agent here</p></body></html>")).toBeNull();
   });
 });
