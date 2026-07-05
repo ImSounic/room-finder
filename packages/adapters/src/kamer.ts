@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import type { Furnished, RawListing, SourceAdapter, UnitType } from "@rf/core";
-import { withPage } from "./browser.js";
+import type { Contact, Furnished, Listing, RawListing, SourceAdapter, UnitType } from "@rf/core";
+import { withPage, withBrowserPages } from "./browser.js";
 
 // Cloudflare-fronted: curl with a browser UA passed recon, but Node's
 // undici fetch (any headers) is challenged with a 403 "Just a moment..."
@@ -84,6 +84,76 @@ export function parseKamer(html: string): RawListing[] {
   return out;
 }
 
+/** Parse the publicly displayed agency/broker contact block from a kamer.nl
+ *  DETAIL page, if one exists. Verified 2026-07-05 against live detail-page
+ *  fixtures (see fixtures/kamer-detail.html): kamer.nl does not render a
+ *  broker/agency name or phone number anywhere on the detail page — the
+ *  "aangeboden door" ("offered by") string that exists in the markup only
+ *  ever appears inside the Cookiebot consent dialog boilerplate (e.g.
+ *  "diensten die worden aangeboden door Cloudflare"), never as an actual
+ *  listing agent block, and there are no `tel:` links on the page at all.
+ *  Contact instead happens exclusively through kamer.nl's own in-site
+ *  "reageren" (respond) lead form (a `/<slug>/<id>/reageren/` sub-path),
+ *  which requires filling out a form rather than exposing a phone number.
+ *  This function is kept (mirroring pararius's parseParariusContact) in case
+ *  kamer.nl's markup changes to expose real broker details, or a future
+ *  listing type does render one — it defensively returns null today. */
+export function parseKamerContact(html: string): Contact | null {
+  if (!html) return null;
+  try {
+    const $ = cheerio.load(html);
+    const agency = $(".agent-summary__title-link, [data-testid='agent-name'], .broker-name")
+      .first()
+      .text()
+      .trim()
+      .replace(/\s+/g, " ");
+    const telHref = $('a[href^="tel:"]').first().attr("href");
+    const phone = telHref ? telHref.replace(/^tel:\s*/i, "").trim() : undefined;
+    if (!agency && !phone) return null;
+    const contact: Contact = {};
+    if (agency) contact.agency = agency;
+    if (phone) contact.phone = phone;
+    return contact;
+  } catch {
+    return null;
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** For up to `limit` matched listings, open their kamer.nl detail page and
+ *  fill in `contact` from the publicly displayed agency/broker block (in
+ *  practice this is currently always null — see parseKamerContact). Each
+ *  listing is isolated (a failure on one doesn't affect the others) and left
+ *  with contact: null on failure. Pages are opened sequentially in one
+ *  browser (kamer.nl is Cloudflare TLS-fingerprinted, so plain fetch is
+ *  blocked — detail fetches must go through Playwright), with a polite pause
+ *  between them. */
+export async function enrichKamerContacts(listings: RawListing[], limit = 30): Promise<RawListing[]> {
+  const targets = listings.slice(0, limit);
+  const rest = listings.slice(limit);
+  const enriched = await withBrowserPages(async (newPage) => {
+    const out: RawListing[] = [];
+    for (const listing of targets) {
+      try {
+        const page = await newPage();
+        try {
+          await page.goto(listing.url, { waitUntil: "domcontentloaded" });
+          const html = await page.content();
+          out.push({ ...listing, contact: parseKamerContact(html) });
+        } finally {
+          await page.close();
+        }
+      } catch {
+        out.push({ ...listing, contact: null });
+      }
+      await sleep(1000 + Math.random() * 1000);
+    }
+    return out;
+  });
+  return [...enriched, ...rest];
+}
+
 export const kamerAdapter: SourceAdapter = {
   name: "kamer",
   kind: "browser",
@@ -94,5 +164,8 @@ export const kamerAdapter: SourceAdapter = {
       return page.content();
     });
     return parseKamer(html);
+  },
+  async enrichListings(listings: Listing[]): Promise<Listing[]> {
+    return (await enrichKamerContacts(listings)) as Listing[];
   },
 };
