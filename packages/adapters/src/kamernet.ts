@@ -133,10 +133,19 @@ export interface KnFacilities {
 }
 
 function facilityKind(text: string, noun: string): "private" | "shared" | "unknown" {
-  // match "<qualifier> <noun>" where qualifier ∈ private/own/shared, case-insensitive
-  const m = text.match(new RegExp(`(private|own|shared)\\s+${noun}`, "i"));
-  if (!m) return "unknown";
-  return /shared/i.test(m[1]) ? "shared" : "private";
+  // skip negated mentions ("no private bathroom") so we never falsely promote a shared room
+  const re = new RegExp(`(\\w+\\s+)?(private|own|shared)\\s+${noun}`, "gi");
+  let hasShared = false;
+  for (const m of text.matchAll(re)) {
+    const preceding = (m[1] ?? "").trim().toLowerCase();
+    if (["no", "not", "geen", "zonder"].includes(preceding)) {
+      // negated → skip, but track if it was shared (in case all mentions are negated)
+      if (/shared/i.test(m[2])) hasShared = true;
+      continue;
+    }
+    return /shared/i.test(m[2]) ? "shared" : "private";
+  }
+  return hasShared ? "shared" : "unknown";
 }
 
 /** Parse the publicly rendered facility details (bathroom/kitchen private-vs-

@@ -109,4 +109,8 @@ describe("parseKamernetDetail", () => {
     expect(f.surfaceArea).toBeNull();
     expect(f.furnished).toBe("unknown");
   });
+  it("does not read a negated facility as present", () => {
+    expect(parseKamernetDetail("<div>No private bathroom, only shared bathroom</div>").bathroom).toBe("shared");
+    expect(parseKamernetDetail("<div>Geen eigen badkamer</div>").bathroom).not.toBe("private");
+  });
 });
