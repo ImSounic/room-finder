@@ -26,18 +26,27 @@ export async function enablePush(): Promise<void> {
     applicationServerKey: urlBase64ToUint8Array(key),
   });
   const json = sub.toJSON();
+  if (!json.endpoint || !json.keys) {
+    await sub.unsubscribe().catch(() => {});
+    throw new Error("browser returned incomplete push subscription");
+  }
   const { error } = await createClient().from("push_subscriptions").upsert(
-    { endpoint: json.endpoint!, keys: json.keys! },
+    { endpoint: json.endpoint, keys: json.keys },
     { onConflict: "endpoint", ignoreDuplicates: true },
   );
-  if (error) throw new Error(error.message);
+  if (error) {
+    await sub.unsubscribe().catch(() => {});
+    throw new Error(error.message);
+  }
 }
 
 export async function disablePush(): Promise<void> {
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();
   if (sub) {
-    await createClient().from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    const endpoint = sub.endpoint;
     await sub.unsubscribe();
+    // Dead-endpoint pruning in the worker covers us if this delete fails.
+    await createClient().from("push_subscriptions").delete().eq("endpoint", endpoint);
   }
 }

@@ -5,6 +5,7 @@ import { enablePush, disablePush, isPushEnabled } from "@/lib/push-client";
 export function PushToggle() {
   const [on, setOn] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Best-effort initial state; failures just leave the toggle off (nothing actionable).
   useEffect(() => { isPushEnabled().then(setOn).catch(() => {}); }, []);
   async function toggle() {
     setErr(null);
