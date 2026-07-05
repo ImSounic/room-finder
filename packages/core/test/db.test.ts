@@ -6,7 +6,7 @@ const l = (id: string, addressKey?: string | null): Listing => ({
   source: "test", externalId: id, url: `https://e.x/${id}`, title: id,
   price: 700, bills: "incl", type: "studio", furnished: "yes", area: null,
   postalcode: null, availableFrom: null, contact: null, raw: {}, score: 80,
-  addressKey,
+  addressKey, isMatch: true,
 });
 
 function fakeSupabase(existing: Set<string>) {
@@ -34,6 +34,7 @@ describe("insertNewListings", () => {
     expect(row.external_id).toBe("c");
     expect(row.available_from).toBeNull();
     expect(row.address_key).toBe("x");
+    expect(row.is_match).toBe(true);
   });
   it("returns [] for empty input without touching the client", async () => {
     const inserted = await insertNewListings(null as never, []);

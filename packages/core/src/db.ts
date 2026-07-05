@@ -13,6 +13,7 @@ export interface ListingRow {
   price: number | null; bills: string; type: string; furnished: string;
   area: string | null; postalcode: string | null; available_from: string | null;
   score: number; contact: unknown; raw: unknown; address_key: string | null;
+  is_match: boolean;
 }
 
 function toRow(l: Listing): ListingRow {
@@ -21,6 +22,7 @@ function toRow(l: Listing): ListingRow {
     price: l.price, bills: l.bills, type: l.type, furnished: l.furnished,
     area: l.area, postalcode: l.postalcode, available_from: l.availableFrom,
     score: l.score, contact: l.contact, raw: l.raw, address_key: l.addressKey ?? null,
+    is_match: l.isMatch,
   };
 }
 

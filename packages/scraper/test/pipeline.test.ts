@@ -9,15 +9,19 @@ const raw = (id: string, over: Partial<RawListing> = {}): RawListing => ({
 });
 
 describe("processListings", () => {
-  it("filters, scores and stamps source", () => {
+  it("scores and stamps source, keeping non-matches with isMatch false", () => {
     const out = processListings("roomspot", [
       raw("keep"),
       raw("too-expensive", { price: 1400 }),
       raw("shared", { type: "room-shared" }),
     ]);
-    expect(out.map((l) => l.externalId)).toEqual(["keep"]);
-    expect(out[0].source).toBe("roomspot");
-    expect(out[0].score).toBeGreaterThan(0);
+    expect(out).toHaveLength(3);
+    expect(out.find((l) => l.externalId === "keep")!.isMatch).toBe(true);
+    expect(out.find((l) => l.externalId === "too-expensive")!.isMatch).toBe(false);
+    expect(out.find((l) => l.externalId === "shared")!.isMatch).toBe(false);
+    const keep = out.find((l) => l.externalId === "keep")!;
+    expect(keep.source).toBe("roomspot");
+    expect(keep.score).toBeGreaterThan(0);
   });
   it("sorts by score descending", () => {
     const out = processListings("x", [

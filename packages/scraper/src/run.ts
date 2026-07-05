@@ -43,14 +43,22 @@ for (const adapter of adapters) {
   let alertFailures = 0;
   try {
     const raws = await adapter.fetchListings({ fetch });
-    const matches = processListings(adapter.name, raws);
-    const enriched = adapter.enrichMatches ? await adapter.enrichMatches(matches) : matches;
-    const inserted = await insertNewListings(db, enriched);
-    // Alert ONLY on rows that were actually new (race-proof across overlapping runs)
-    const byId = new Map(enriched.map((m) => [m.externalId, m]));
+    const processed = processListings(adapter.name, raws);
+    const matches = processed.filter((l) => l.isMatch);
+    if (adapter.enrichMatches && matches.length > 0) {
+      const enriched = await adapter.enrichMatches(matches);
+      const byExt = new Map(enriched.map((l) => [l.externalId, l]));
+      for (let i = 0; i < processed.length; i++) {
+        const e = byExt.get(processed[i].externalId);
+        if (e) processed[i] = e;
+      }
+    }
+    const inserted = await insertNewListings(db, processed);
+    // Alert ONLY on rows that were actually new (race-proof across overlapping runs) AND match criteria
+    const byId = new Map(processed.map((m) => [m.externalId, m]));
     for (const row of inserted) {
       const listing = byId.get(row.external_id);
-      if (listing) {
+      if (listing && listing.isMatch) {
         try {
           await sendDiscord(buildAlertPayload(listing));
         } catch (err) {
@@ -61,24 +69,25 @@ for (const adapter of adapters) {
         await sleep(ALERT_DELAY_MS);
       }
     }
-    // Web push to the dashboard (same new listings). No-op if no subscriptions / VAPID unset.
+    // Web push to the dashboard (same new matching listings). No-op if no subscriptions / VAPID unset.
     if (inserted.length > 0) {
       const subs = await getActivePushSubscriptions(db);
       if (subs.length > 0) {
         for (const row of inserted) {
           const listing = byId.get(row.external_id);
-          if (!listing) continue;
+          if (!listing || !listing.isMatch) continue;
           const results = await sendPush(subs, buildPushPayload(listing));
           const dead = deadEndpoints(results);
           if (dead.length > 0) await deletePushSubscriptions(db, dead);
         }
       }
     }
+    const insertedMatches = inserted.filter((row) => byId.get(row.external_id)?.isMatch).length;
     await logSourceRun(db, { source: adapter.name, ok: true,
-      total_found: raws.length, new_matches: inserted.length,
+      total_found: raws.length, new_matches: insertedMatches,
       ...(alertFailures > 0 ? { error: `${alertFailures} alert(s) failed to send` } : {}) });
     console.log(`${adapter.name}: ${raws.length} found, ${matches.length} match, ` +
-      `${inserted.length} new (${Date.now() - started}ms)` +
+      `${inserted.length} new (${insertedMatches} matching) (${Date.now() - started}ms)` +
       (alertFailures > 0 ? ` [${alertFailures} alert(s) failed]` : ""));
   } catch (err) {
     adapterFailures++;

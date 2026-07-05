@@ -29,6 +29,7 @@ export interface RawListing {
 export interface Listing extends RawListing {
   source: string;
   score: number;
+  isMatch: boolean;
   addressKey?: string | null;
 }
 
