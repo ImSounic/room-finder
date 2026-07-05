@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseKamernet } from "../src/kamernet.js";
+import { parseKamernet, parseKamernetDetail } from "../src/kamernet.js";
 
 const html = readFileSync(new URL("../fixtures/kamernet.html", import.meta.url), "utf8");
+const detail = readFileSync(new URL("../fixtures/kamernet-detail.html", import.meta.url), "utf8");
 
 describe("parseKamernet", () => {
   const listings = parseKamernet(html);
@@ -84,5 +85,28 @@ describe("parseKamernet", () => {
     const result = parseKamernet(html);
     expect(result.length).toBe(1);
     expect(result[0].externalId).toBe("12345");
+  });
+});
+
+describe("parseKamernetDetail", () => {
+  it("reads facilities from the real fixture (Janninksweg: all shared)", () => {
+    const f = parseKamernetDetail(detail);
+    expect(f.bathroom).toBe("shared");
+    expect(f.kitchen).toBe("shared");
+    expect(f.surfaceArea).toBe(20);
+    expect(f.furnished).toBe("no"); // "Unfurnished"
+  });
+  it("detects a private/own bathroom", () => {
+    expect(parseKamernetDetail("<div>Private bathroom Shared kitchen 30 m² Furnished room</div>").bathroom).toBe(
+      "private",
+    );
+    expect(parseKamernetDetail("<div>Own bathroom own kitchen</div>").bathroom).toBe("private");
+  });
+  it("returns unknowns for empty/junk", () => {
+    const f = parseKamernetDetail("");
+    expect(f.bathroom).toBe("unknown");
+    expect(f.kitchen).toBe("unknown");
+    expect(f.surfaceArea).toBeNull();
+    expect(f.furnished).toBe("unknown");
   });
 });

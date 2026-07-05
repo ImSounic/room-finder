@@ -124,6 +124,50 @@ export function parseKamernet(html: string): RawListing[] {
     }));
 }
 
+export interface KnFacilities {
+  bathroom: "private" | "shared" | "unknown";
+  kitchen: "private" | "shared" | "unknown";
+  surfaceArea: number | null;
+  furnished: Furnished;
+}
+
+function facilityKind(text: string, noun: string): "private" | "shared" | "unknown" {
+  // match "<qualifier> <noun>" where qualifier ∈ private/own/shared, case-insensitive
+  const m = text.match(new RegExp(`(private|own|shared)\\s+${noun}`, "i"));
+  if (!m) return "unknown";
+  return /shared/i.test(m[1]) ? "shared" : "private";
+}
+
+/** Parse the publicly rendered facility details (bathroom/kitchen private-vs-
+ *  shared, surface area, furnishing) from a Kamernet DETAIL page. Unlike the
+ *  search-results payload (__NEXT_DATA__), detail pages render these values
+ *  straight into the DOM text, so we strip tags/scripts and pattern-match on
+ *  the flattened text rather than parsing JSON. */
+export function parseKamernetDetail(html: string): KnFacilities {
+  try {
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ");
+    const surf = text.match(/(\d+)\s*m²/);
+    const furnished: Furnished = /\bsemi-?furnished\b/i.test(text)
+      ? "semi"
+      : /\bunfurnished\b/i.test(text)
+        ? "no"
+        : /\bfurnished\b/i.test(text)
+          ? "yes"
+          : "unknown";
+    return {
+      bathroom: facilityKind(text, "bathroom"),
+      kitchen: facilityKind(text, "kitchen"),
+      surfaceArea: surf ? Number(surf[1]) : null,
+      furnished,
+    };
+  } catch {
+    return { bathroom: "unknown", kitchen: "unknown", surfaceArea: null, furnished: "unknown" };
+  }
+}
+
 export const kamernetAdapter: SourceAdapter = {
   name: "kamernet",
   kind: "http",
