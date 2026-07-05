@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PushToggle } from "@/components/PushToggle";
 
 const tabs = [["/listings", "Listings"], ["/applied", "Applied"], ["/replies", "Replies"]] as const;
 
@@ -8,6 +9,7 @@ export function Nav() {
       {tabs.map(([href, label]) => (
         <Link key={href} href={href} className="hover:underline">{label}</Link>
       ))}
+      <PushToggle />
     </nav>
   );
 }
