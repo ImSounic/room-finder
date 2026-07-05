@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { priceLabel, CRITERIA, type ListingView } from "@rf/core";
+import { priceLabel, CRITERIA, draftIntroEmail, type ListingView } from "@rf/core";
 import { ContactPanel } from "./ContactPanel";
 import { timeAgo } from "@/lib/time";
 
@@ -33,6 +33,15 @@ export function ListingCard({ listing, fresh = false, twin = null }: { listing: 
   const dismissed = status === "dismissed";
   const hasContact = !!listing.contact && !!(listing.contact.phone || listing.contact.email || listing.contact.agency);
   const showTwin = twin !== null && !hasContact;
+
+  const email = listing.contact?.email;
+  const owner = { name: process.env.NEXT_PUBLIC_OWNER_NAME ?? "", phone: process.env.NEXT_PUBLIC_OWNER_PHONE ?? "" };
+  const mailtoHref = email
+    ? (() => {
+        const { subject, body } = draftIntroEmail(listing, owner);
+        return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      })()
+    : null;
 
   return (
     <article
@@ -130,11 +139,19 @@ export function ListingCard({ listing, fresh = false, twin = null }: { listing: 
             Dismiss
           </button>
         )}
+        {mailtoHref && (
+          <a
+            href={mailtoHref}
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-(--radius-control) bg-accent-soft px-3 text-sm font-medium text-accent hover:brightness-105"
+          >
+            ✉️ Email agency
+          </a>
+        )}
         <a
           href={listing.url}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+          className={`inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline ${mailtoHref ? "" : "ml-auto"}`}
         >
           Open ↗
         </a>
