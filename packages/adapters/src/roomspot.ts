@@ -9,6 +9,7 @@ interface RsObject {
   urlKey: string;
   street: string;
   houseNumber: string;
+  houseNumberAddition: string | null;
   postalcode: string;
   city: { name: string } | null;
   totalRent: number | null;
@@ -46,14 +47,17 @@ function normalizeDate(raw: string | null | undefined): string | null {
 }
 
 export function parseRoomspot(payload: { result: RsObject[] }): RawListing[] {
-  return (payload.result ?? [])
+  const items = Array.isArray(payload?.result) ? payload.result : [];
+  return items
+    .filter((o): o is RsObject => o != null && typeof o === "object")
     .filter((o) => o.isGepubliceerd !== false)
     .filter((o) => (o.rentBuy ?? "Huur").toLowerCase() !== "koop")
     .filter((o) => (o.city?.name ?? "").toLowerCase() === "enschede")
+    .filter((o) => !!o.id && !!o.urlKey)
     .map((o) => ({
       externalId: String(o.id),
       url: `${DETAIL_BASE}${o.urlKey}`,
-      title: `${o.street} ${o.houseNumber}, Enschede`,
+      title: `${o.street} ${o.houseNumber}${o.houseNumberAddition ? " " + o.houseNumberAddition : ""}, Enschede`,
       price: o.totalRent != null ? Math.round(o.totalRent) : null,
       bills: "unknown" as const, // totalRent includes service costs; utilities vary
       type: classify(o),

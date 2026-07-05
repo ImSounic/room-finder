@@ -28,4 +28,59 @@ describe("parseRoomspot", () => {
       if (raw.isZelfstandig === false) expect(["room-shared", "room-private-bath"]).toContain(l.type);
     }
   });
+  it("classifies zelfstandige kamer as studio", () => {
+    const zelfKamer = listings.find((l) => {
+      const raw = l.raw as { isZelfstandig?: boolean; dwellingType?: { localizedName?: string } };
+      return raw.isZelfstandig === true && (raw.dwellingType?.localizedName ?? "") === "Kamer";
+    });
+    expect(zelfKamer).toBeDefined();
+    expect(zelfKamer?.type).toBe("studio");
+  });
+});
+
+describe("defensive parsing", () => {
+  it("returns [] when result is a non-array object", () => {
+    expect(parseRoomspot({ result: { foo: 1 } } as never)).toEqual([]);
+  });
+  it("returns [] when result is a string", () => {
+    expect(parseRoomspot({ result: "oops" } as never)).toEqual([]);
+  });
+  it("skips null/undefined array elements without throwing", () => {
+    const validObject = payload.result.find(
+      (o: any) => (o.city?.name ?? "").toLowerCase() === "enschede" && o.isGepubliceerd !== false,
+    );
+    const result = parseRoomspot({ result: [null, validObject] } as never);
+    expect(result.length).toBe(1);
+  });
+  it("skips records missing id", () => {
+    const validObject = payload.result.find(
+      (o: any) => (o.city?.name ?? "").toLowerCase() === "enschede" && o.isGepubliceerd !== false,
+    );
+    const clone = { ...validObject };
+    delete clone.id;
+    const result = parseRoomspot({ result: [clone] } as never);
+    expect(result.length).toBe(0);
+  });
+  it("skips records missing urlKey", () => {
+    const validObject = payload.result.find(
+      (o: any) => (o.city?.name ?? "").toLowerCase() === "enschede" && o.isGepubliceerd !== false,
+    );
+    const clone = { ...validObject };
+    delete clone.urlKey;
+    const result = parseRoomspot({ result: [clone] } as never);
+    expect(result.length).toBe(0);
+  });
+  it("includes houseNumberAddition in title when present", () => {
+    const withAddition = payload.result.find(
+      (o: any) =>
+        (o.city?.name ?? "").toLowerCase() === "enschede" &&
+        o.isGepubliceerd !== false &&
+        o.houseNumberAddition,
+    );
+    expect(withAddition).toBeDefined();
+    const [listing] = parseRoomspot({ result: [withAddition] } as never);
+    expect(listing.title).toBe(
+      `${withAddition.street} ${withAddition.houseNumber} ${withAddition.houseNumberAddition}, Enschede`,
+    );
+  });
 });
