@@ -210,6 +210,7 @@ export function parseHousingAnywhere(html: string): RawListing[] {
         type: mapType(l.propertyType),
         furnished: mapFurnished(l.facility_bedroom_furnished),
         area: l.street ?? null,
+        streetAddress: l.street ?? null,
         postalcode: null, // not present in the search payload
         availableFrom: normalizeDate(l.dateFrom),
         contact: null, // on-platform messaging only

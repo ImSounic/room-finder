@@ -22,6 +22,8 @@ export interface RawListing {
   availableFrom: string | null; // ISO yyyy-mm-dd
   contact: Contact | null;
   raw: unknown;
+  // clean "Street 12a" when the source provides it — preferred basis for the cross-source address key
+  streetAddress?: string | null;
 }
 
 export interface Listing extends RawListing {

@@ -34,4 +34,10 @@ describe("processListings", () => {
     expect(out.find((l) => l.externalId === "with-number")!.addressKey).toBe("7522lh-matenweg-14-208");
     expect(out.find((l) => l.externalId === "no-number")!.addressKey).toBeNull();
   });
+  it("prefers a clean streetAddress over a sentence-style title for the key", () => {
+    const out = processListings("housinganywhere", [
+      raw("ha", { title: "Private room on Getfertsingel 45, Enschede", postalcode: "7513 AB", streetAddress: "Getfertsingel 45" }),
+    ]);
+    expect(out[0].addressKey).toBe("7513ab-getfertsingel-45");
+  });
 });
