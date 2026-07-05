@@ -6,7 +6,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b packages/core packages/adapters packages/notifier packages/scraper",
     "scrape": "node --env-file=.env packages/scraper/dist/run.js",
-    "build": "tsc -b packages/core packages/adapters packages/notifier packages/scraper"
+    "build": "tsc -b packages/core packages/adapters packages/notifier packages/scraper",
+    "smoke": "npm run build && node packages/scraper/dist/smoke.js"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
