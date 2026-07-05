@@ -5,3 +5,4 @@ export * from "./score.js";
 export * from "./db.js";
 export * from "./present.js";
 export * from "./crossref.js";
+export * from "./email.js";
