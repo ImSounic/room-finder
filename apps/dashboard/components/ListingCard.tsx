@@ -1,24 +1,28 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { priceLabel, type ListingView } from "@rf/core";
+import { priceLabel, CRITERIA, type ListingView } from "@rf/core";
 import { ContactPanel } from "./ContactPanel";
 
 export function ListingCard({ listing }: { listing: ListingView }) {
-  const [status, setStatus] = useState(listing.status);
+  const [pending, setPending] = useState<string | null>(null);
+  const status = pending ?? listing.status;
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function mark(next: "applied" | "dismissed") {
-    setBusy(true);
+    setBusy(true); setError(null);
     const supabase = createClient();
-    await supabase.from("listings").update({ status: next }).eq("id", listing.id);
+    const { error: upErr } = await supabase.from("listings").update({ status: next }).eq("id", listing.id);
+    if (upErr) { setError(upErr.message); setBusy(false); return; }
     if (next === "applied") {
-      await supabase.from("applications").insert({ listing_id: listing.id, method: "manual", status: "sent" });
+      const { error: insErr } = await supabase.from("applications").insert({ listing_id: listing.id, method: "manual", status: "sent" });
+      if (insErr) { setError(insErr.message); setBusy(false); return; }
     }
-    setStatus(next); setBusy(false);
+    setPending(next); setBusy(false);
   }
 
-  const high = listing.score >= 70;
+  const high = listing.score >= CRITERIA.highPriorityScore;
   return (
     <div className={`rounded-lg border p-3 ${status === "dismissed" ? "opacity-50" : ""}`}>
       <div className="flex items-start justify-between gap-2">
@@ -43,6 +47,7 @@ export function ListingCard({ listing }: { listing: ListingView }) {
         <button disabled={busy} onClick={() => mark("dismissed")}
           className="rounded border px-2 py-1 disabled:opacity-40">dismiss</button>
       </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
