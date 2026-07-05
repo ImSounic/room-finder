@@ -19,9 +19,10 @@ describe("matchesCriteria", () => {
     expect(matchesCriteria({ ...base, type: "room-shared" }).pass).toBe(false));
   it("accepts unknown type (never silently drop ambiguous)", () =>
     expect(matchesCriteria({ ...base, type: "unknown" }).pass).toBe(true));
-  it("enforces price band boundaries", () => {
-    expect(matchesCriteria({ ...base, price: 499 }).pass).toBe(false);
-    expect(matchesCriteria({ ...base, price: 500 }).pass).toBe(true);
+  it("enforces price band boundaries (no real floor, €950 cap)", () => {
+    expect(matchesCriteria({ ...base, price: 0 }).pass).toBe(false);    // €0 mis-parse blocked
+    expect(matchesCriteria({ ...base, price: 1 }).pass).toBe(true);
+    expect(matchesCriteria({ ...base, price: 417 }).pass).toBe(true);   // cheap on-campus room now matches
     expect(matchesCriteria({ ...base, price: 950 }).pass).toBe(true);
     expect(matchesCriteria({ ...base, price: 951 }).pass).toBe(false);
   });

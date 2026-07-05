@@ -1,6 +1,6 @@
 export const CRITERIA = {
   city: "enschede",
-  minPrice: 500,
+  minPrice: 1,
   maxPrice: 950,
   moveInDeadline: "2026-08-17",
   acceptedTypes: ["studio", "apartment", "room-private-bath"] as const,
