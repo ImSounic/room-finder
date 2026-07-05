@@ -31,6 +31,9 @@ function mapType(t: number): UnitType {
   if (t === 2) return "apartment";
   return "unknown";
 }
+// listingType 1 (room) maps to room-shared: the search payload has no bathroom
+// info, so most Kamernet rooms won't clear the hard filter. Distinguishing
+// private-bath rooms would need paywalled detail pages — deliberately not done.
 
 // Verified 2026-07-05 by cross-referencing furnishingId against the rendered
 // "<h6>...Room for rent</h6>" label on live detail pages:
@@ -59,20 +62,32 @@ function extractListings(html: string): KnListing[] {
     return [];
   }
   const out: KnListing[] = [];
-  const walk = (o: unknown): void => {
-    if (Array.isArray(o)) {
-      o.forEach(walk);
-      return;
-    }
-    if (o && typeof o === "object") {
-      const rec = o as Record<string, unknown>;
-      if (typeof rec.listingId === "number" && typeof rec.street === "string") {
-        out.push(rec as unknown as KnListing);
+  try {
+    const walk = (o: unknown, depth: number = 0): void => {
+      // Fail-open: stop walking past depth 20 to prevent stack overflow
+      if (depth > 20) return;
+      if (Array.isArray(o)) {
+        o.forEach((item) => walk(item, depth + 1));
+        return;
       }
-      Object.values(rec).forEach(walk);
-    }
-  };
-  walk(data);
+      if (o && typeof o === "object") {
+        const rec = o as Record<string, unknown>;
+        // Tighten shape guard: require citySlug to be a string in addition to listingId/street
+        if (
+          typeof rec.listingId === "number" &&
+          typeof rec.street === "string" &&
+          typeof rec.citySlug === "string"
+        ) {
+          out.push(rec as unknown as KnListing);
+        }
+        Object.values(rec).forEach((item) => walk(item, depth + 1));
+      }
+    };
+    walk(data);
+  } catch {
+    // Wrap entire walk in try-catch as fail-open: return what we have so far
+    return out;
+  }
   return out;
 }
 

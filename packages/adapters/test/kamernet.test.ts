@@ -29,4 +29,60 @@ describe("parseKamernet", () => {
     expect(parseKamernet("")).toEqual([]);
     expect(parseKamernet("<html>no data</html>")).toEqual([]);
   });
+  it("returns [] for deeply nested payload without stack overflow", () => {
+    // Build a synthetic deeply-nested object (500+ levels) that should not crash
+    let nested: unknown = { x: 1 };
+    for (let i = 0; i < 500; i++) {
+      nested = { a: nested };
+    }
+    const html = `<script id="__NEXT_DATA__">${JSON.stringify(nested)}</script>`;
+    expect(parseKamernet(html)).toEqual([]);
+  });
+  it("dedupes within a single NEXT_DATA with duplicate listingIds", () => {
+    // Hand-built minimal NEXT_DATA with the same listingId appearing twice
+    const payload = {
+      props: {
+        listings: [
+          {
+            listingId: 12345,
+            listingType: 1,
+            street: "Straat A",
+            streetSlug: "straat-a",
+            city: "Enschede",
+            citySlug: "enschede",
+            totalRentalPrice: 500,
+            utilitiesIncluded: false,
+            surfaceArea: 30,
+            availabilityStartDate: "2026-08-01",
+            availabilityEndDate: null,
+            furnishingId: 1,
+            isStudentHouseAdvert: false,
+            isReactForFree: false,
+            isTopAdvert: false,
+          },
+          {
+            listingId: 12345, // Same ID
+            listingType: 1,
+            street: "Straat A",
+            streetSlug: "straat-a",
+            city: "Enschede",
+            citySlug: "enschede",
+            totalRentalPrice: 500,
+            utilitiesIncluded: false,
+            surfaceArea: 30,
+            availabilityStartDate: "2026-08-01",
+            availabilityEndDate: null,
+            furnishingId: 1,
+            isStudentHouseAdvert: false,
+            isReactForFree: false,
+            isTopAdvert: false,
+          },
+        ],
+      },
+    };
+    const html = `<script id="__NEXT_DATA__">${JSON.stringify(payload)}</script>`;
+    const result = parseKamernet(html);
+    expect(result.length).toBe(1);
+    expect(result[0].externalId).toBe("12345");
+  });
 });
