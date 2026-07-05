@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/Nav";
+import { SourceHealthBar } from "@/components/SourceHealthBar";
 import { StatusPicker } from "@/components/StatusPicker";
 import { priceLabel, type ListingView } from "@rf/core";
 
@@ -20,6 +21,7 @@ export default async function AppliedPage() {
   return (
     <>
       <Nav />
+      <SourceHealthBar />
       <div className="p-4 flex flex-col gap-2">
         {rows.length === 0 && <p className="text-neutral-500 text-sm">No applications yet.</p>}
         {rows.map((a) => (

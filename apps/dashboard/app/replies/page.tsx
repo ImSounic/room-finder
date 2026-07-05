@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/Nav";
+import { SourceHealthBar } from "@/components/SourceHealthBar";
 import { AddReply } from "@/components/AddReply";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function RepliesPage() {
   return (
     <>
       <Nav />
+      <SourceHealthBar />
       <div className="p-4">
         <AddReply applications={appOpts} />
         <div className="flex flex-col gap-2">

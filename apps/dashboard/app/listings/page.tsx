@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/Nav";
+import { SourceHealthBar } from "@/components/SourceHealthBar";
 import { ListingsLive } from "@/components/ListingsLive";
 import type { ListingView } from "@rf/core";
 
@@ -15,6 +16,7 @@ export default async function ListingsPage() {
   return (
     <>
       <Nav />
+      <SourceHealthBar />
       <ListingsLive initial={(data ?? []) as ListingView[]} />
     </>
   );
