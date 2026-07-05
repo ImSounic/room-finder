@@ -1,8 +1,11 @@
-import { roomspotAdapter } from "@rf/adapters";
+import { roomspotAdapter, parariusAdapter } from "@rf/adapters";
 import { matchesCriteria, scoreListing } from "@rf/core";
 import type { SourceAdapter } from "@rf/core";
 
-const adapters: Record<string, SourceAdapter> = { roomspot: roomspotAdapter };
+const adapters: Record<string, SourceAdapter> = {
+  roomspot: roomspotAdapter,
+  pararius: parariusAdapter,
+};
 const name = process.argv[2] ?? "";
 const adapter = adapters[name];
 if (!adapter) {
