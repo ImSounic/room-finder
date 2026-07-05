@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { sortAndFilter, type ListingView, type ListingFilter } from "@rf/core";
+import { sortAndFilter, linkByAddress, type ListingView, type ListingFilter } from "@rf/core";
 import { ListingCard } from "./ListingCard";
 
 const SCORE_STEPS = [
@@ -34,6 +34,14 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
 
   const sources = useMemo(() => [...new Set(rows.map((r) => r.source))].sort(), [rows]);
   const view = useMemo(() => sortAndFilter(rows, filter), [rows, filter]);
+  const twins = useMemo(() => {
+    const m = new Map<string, ListingView>();
+    for (const r of rows) {
+      const t = linkByAddress(r, rows);
+      if (t) m.set(r.id, t);
+    }
+    return m;
+  }, [rows]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-16 pt-2">
@@ -93,7 +101,7 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {view.map((l) => (
-            <ListingCard key={l.id} listing={l} fresh={freshIds.current.has(l.id)} />
+            <ListingCard key={l.id} listing={l} fresh={freshIds.current.has(l.id)} twin={twins.get(l.id) ?? null} />
           ))}
         </div>
       )}

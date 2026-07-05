@@ -4,7 +4,15 @@ import { priceLabel, sortAndFilter, computeSourceHealth, type ListingView } from
 const v = (over: Partial<ListingView> = {}): ListingView => ({
   id: "1", source: "roomspot", url: "u", title: "t", price: 700, bills: "incl",
   type: "studio", furnished: "yes", area: "Calslaan", postalcode: null,
-  available_from: null, score: 80, contact: null, status: "new", first_seen_at: "2026-07-05T10:00:00Z", ...over,
+  available_from: null, score: 80, contact: null, status: "new", first_seen_at: "2026-07-05T10:00:00Z",
+  address_key: null, ...over,
+});
+
+describe("ListingView shape", () => {
+  it("includes address_key for cross-reference linking", () => {
+    expect(v({ address_key: "7500aa-teststraat-1" }).address_key).toBe("7500aa-teststraat-1");
+    expect(v().address_key).toBeNull();
+  });
 });
 
 describe("priceLabel", () => {

@@ -11,7 +11,7 @@ function scoreTone(score: number): string {
   return "bg-surface-2 text-muted";
 }
 
-export function ListingCard({ listing, fresh = false }: { listing: ListingView; fresh?: boolean }) {
+export function ListingCard({ listing, fresh = false, twin = null }: { listing: ListingView; fresh?: boolean; twin?: ListingView | null }) {
   const [pending, setPending] = useState<string | null>(null);
   const status = pending ?? listing.status;
   const [busy, setBusy] = useState(false);
@@ -31,6 +31,8 @@ export function ListingCard({ listing, fresh = false }: { listing: ListingView; 
 
   const high = listing.score >= CRITERIA.highPriorityScore;
   const dismissed = status === "dismissed";
+  const hasContact = !!listing.contact && !!(listing.contact.phone || listing.contact.email || listing.contact.agency);
+  const showTwin = twin !== null && !hasContact;
 
   return (
     <article
@@ -92,6 +94,18 @@ export function ListingCard({ listing, fresh = false }: { listing: ListingView; 
       </dl>
 
       <ContactPanel contact={listing.contact} />
+
+      {showTwin && (
+        <a
+          href={twin.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex min-h-9 items-center gap-1.5 self-start rounded-full bg-accent-soft px-3 text-xs font-medium text-accent hover:brightness-105"
+        >
+          ↔ Also on {twin.source}
+          {twin.contact?.phone ? ` — ${twin.contact.phone}` : twin.contact?.agency ? ` — ${twin.contact.agency}` : ""} · free contact
+        </a>
+      )}
 
       <div className="mt-3 flex items-center gap-2">
         <button

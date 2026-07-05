@@ -6,6 +6,7 @@ export interface ListingView {
   price: number | null; bills: Bills; type: UnitType; furnished: Furnished;
   area: string | null; postalcode: string | null; available_from: string | null;
   score: number; contact: Contact | null; status: string; first_seen_at: string;
+  address_key: string | null;
 }
 
 export function priceLabel(l: ListingView): string {
