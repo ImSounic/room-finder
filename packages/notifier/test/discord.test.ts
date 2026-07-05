@@ -25,4 +25,21 @@ describe("buildAlertPayload", () => {
     const withContact = { ...l, contact: { email: "agent@x.nl", phone: "053-123" } };
     expect(JSON.stringify(buildAlertPayload(withContact).embeds[0].fields)).toContain("agent@x.nl");
   });
+  it("ping boundary: exactly 70 pings, 69 does not", () => {
+    expect(buildAlertPayload({ ...l, score: 70 }).content).toContain("@everyone");
+    expect(buildAlertPayload({ ...l, score: 69 }).content).toBeUndefined();
+  });
+  it("truncates title over 250 chars", () => {
+    const long = { ...l, title: "x".repeat(300) };
+    expect(buildAlertPayload(long).embeds[0].title.length).toBeLessThanOrEqual(250);
+  });
+  it("renders null area/availableFrom/price as ?", () => {
+    const nulled = { ...l, area: null, availableFrom: null, price: null };
+    const fields = buildAlertPayload(nulled).embeds[0].fields;
+    expect(fields.filter((f) => f.value === "?").length).toBe(3);
+  });
+  it("includes bills flag in price field", () => {
+    const fields = buildAlertPayload({ ...l, bills: "incl" as const }).embeds[0].fields;
+    expect(fields.find((f) => f.name === "Price")?.value).toBe("€650 (incl)");
+  });
 });
