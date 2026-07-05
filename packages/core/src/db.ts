@@ -52,3 +52,15 @@ export async function isSourceUnhealthy(db: SupabaseClient, source: string, n = 
   if (!data || data.length < n) return false;
   return data.every((r) => !r.ok || r.total_found === 0);
 }
+
+export async function getActivePushSubscriptions(db: SupabaseClient): Promise<{ endpoint: string; keys: { p256dh: string; auth: string } }[]> {
+  const { data, error } = await db.from("push_subscriptions").select("endpoint,keys");
+  if (error) { console.error(`push_subscriptions query failed: ${error.message}`); return []; }
+  return (data ?? []) as { endpoint: string; keys: { p256dh: string; auth: string } }[];
+}
+
+export async function deletePushSubscriptions(db: SupabaseClient, endpoints: string[]): Promise<void> {
+  if (endpoints.length === 0) return;
+  const { error } = await db.from("push_subscriptions").delete().in("endpoint", endpoints);
+  if (error) console.error(`push_subscriptions delete failed: ${error.message}`);
+}
