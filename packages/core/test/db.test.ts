@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { insertNewListings } from "../src/db.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { insertNewListings, isSourceUnhealthy } from "../src/db.js";
 import type { Listing } from "../src/types.js";
 
 const l = (id: string): Listing => ({
@@ -36,5 +36,52 @@ describe("insertNewListings", () => {
   it("returns [] for empty input without touching the client", async () => {
     const inserted = await insertNewListings(null as never, []);
     expect(inserted).toEqual([]);
+  });
+});
+
+describe("isSourceUnhealthy", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns false when n <= 0", async () => {
+    const fakeDb = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: () => Promise.resolve({
+                data: [],
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      }),
+    };
+    const result = await isSourceUnhealthy(fakeDb as never, "test", 0);
+    expect(result).toBe(false);
+  });
+
+  it("returns false and logs when the query errors", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fakeDb = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            order: () => ({
+              limit: () => Promise.resolve({
+                data: null,
+                error: { message: "boom" },
+              }),
+            }),
+          }),
+        }),
+      }),
+    };
+    const result = await isSourceUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(false);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("source_runs query failed: boom");
+    consoleErrorSpy.mockRestore();
   });
 });

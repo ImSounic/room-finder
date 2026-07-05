@@ -39,13 +39,16 @@ export async function insertNewListings(db: SupabaseClient, listings: Listing[])
 export async function logSourceRun(db: SupabaseClient, run: {
   source: string; ok: boolean; total_found: number; new_matches: number; error?: string;
 }): Promise<void> {
-  await db.from("source_runs").insert(run);
+  const { error } = await db.from("source_runs").insert(run);
+  if (error) console.error(`source_runs insert failed: ${error.message}`);
 }
 
 /** True if the last `n` runs for this source all failed or found 0 listings. */
 export async function isSourceUnhealthy(db: SupabaseClient, source: string, n = 3): Promise<boolean> {
-  const { data } = await db.from("source_runs").select("ok,total_found")
+  if (n <= 0) return false;
+  const { data, error } = await db.from("source_runs").select("ok,total_found")
     .eq("source", source).order("ran_at", { ascending: false }).limit(n);
+  if (error) { console.error(`source_runs query failed: ${error.message}`); return false; }
   if (!data || data.length < n) return false;
   return data.every((r) => !r.ok || r.total_found === 0);
 }
