@@ -82,6 +82,53 @@ describe("existingExternalIds", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith("existingExternalIds query failed: boom");
     consoleErrorSpy.mockRestore();
   });
+  it("unions results from multiple chunks (150 ids spanning 2 chunks)", async () => {
+    let callCount = 0;
+    const fakeDb = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            in: (slice: string[]) => {
+              callCount++;
+              // First chunk (100 ids): return matches for a5, a25, a50, a99
+              if (callCount === 1) {
+                return Promise.resolve({
+                  data: [
+                    { external_id: "a5" },
+                    { external_id: "a25" },
+                    { external_id: "a50" },
+                    { external_id: "a99" },
+                  ],
+                  error: null,
+                });
+              }
+              // Second chunk (50 ids): return matches for a105, a120, a149
+              if (callCount === 2) {
+                return Promise.resolve({
+                  data: [
+                    { external_id: "a105" },
+                    { external_id: "a120" },
+                    { external_id: "a149" },
+                  ],
+                  error: null,
+                });
+              }
+              return Promise.resolve({ data: [], error: null });
+            },
+          }),
+        }),
+      }),
+    };
+
+    const ids = Array.from({ length: 150 }, (_, i) => `a${i}`);
+    const result = await existingExternalIds(fakeDb as never, "test", ids);
+
+    // Verify we got matches from both chunks
+    expect(result).toEqual(
+      new Set(["a5", "a25", "a50", "a99", "a105", "a120", "a149"])
+    );
+    expect(callCount).toBe(2); // called once for each chunk
+  });
 });
 
 describe("isSourceUnhealthy", () => {

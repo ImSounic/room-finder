@@ -41,10 +41,15 @@ export async function insertNewListings(db: SupabaseClient, listings: Listing[])
 /** Which of these external_ids already exist in `listings` for this source.
  *  Used to enrich only listings new to the DB (first sighting), once. */
 export async function existingExternalIds(db: SupabaseClient, source: string, ids: string[]): Promise<Set<string>> {
-  if (ids.length === 0) return new Set();
-  const { data, error } = await db.from("listings").select("external_id").eq("source", source).in("external_id", ids);
-  if (error) { console.error(`existingExternalIds query failed: ${error.message}`); return new Set(); }
-  return new Set((data ?? []).map((r) => (r as { external_id: string }).external_id));
+  const found = new Set<string>();
+  const CHUNK = 100; // keep each PostgREST GET well under its URL-length limit
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const { data, error } = await db.from("listings").select("external_id").eq("source", source).in("external_id", slice);
+    if (error) { console.error(`existingExternalIds query failed: ${error.message}`); continue; }
+    for (const r of data ?? []) found.add((r as { external_id: string }).external_id);
+  }
+  return found;
 }
 
 export async function logSourceRun(db: SupabaseClient, run: {
