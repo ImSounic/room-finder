@@ -1,4 +1,4 @@
-import { roomspotAdapter, parariusAdapter } from "@rf/adapters";
+import { roomspotAdapter, parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter } from "@rf/adapters";
 import { buildAlertPayload, sendDiscord, buildPushPayload, sendPush, deadEndpoints } from "@rf/notifier";
 import {
   insertNewListings,
@@ -15,7 +15,7 @@ import { processListings } from "./pipeline.js";
 const ALERT_DELAY_MS = 350;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const ALL: SourceAdapter[] = [roomspotAdapter, parariusAdapter];
+const ALL: SourceAdapter[] = [roomspotAdapter, parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter];
 const laneIdx = process.argv.indexOf("--lane");
 const lane = laneIdx !== -1 ? process.argv[laneIdx + 1] : null; // 'http' | 'browser' | null = all
 const adapters = lane ? ALL.filter((a) => a.kind === lane) : ALL;

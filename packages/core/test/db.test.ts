@@ -2,10 +2,11 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { insertNewListings, isSourceUnhealthy } from "../src/db.js";
 import type { Listing } from "../src/types.js";
 
-const l = (id: string): Listing => ({
+const l = (id: string, addressKey?: string | null): Listing => ({
   source: "test", externalId: id, url: `https://e.x/${id}`, title: id,
   price: 700, bills: "incl", type: "studio", furnished: "yes", area: null,
   postalcode: null, availableFrom: null, contact: null, raw: {}, score: 80,
+  addressKey,
 });
 
 function fakeSupabase(existing: Set<string>) {
@@ -29,9 +30,10 @@ describe("insertNewListings", () => {
   });
   it("snake_cases fields for postgres", async () => {
     const db = fakeSupabase(new Set());
-    const [row] = await insertNewListings(db as never, [l("c")]);
+    const [row] = await insertNewListings(db as never, [l("c", "x")]);
     expect(row.external_id).toBe("c");
     expect(row.available_from).toBeNull();
+    expect(row.address_key).toBe("x");
   });
   it("returns [] for empty input without touching the client", async () => {
     const inserted = await insertNewListings(null as never, []);

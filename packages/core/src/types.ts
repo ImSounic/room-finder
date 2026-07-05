@@ -27,6 +27,7 @@ export interface RawListing {
 export interface Listing extends RawListing {
   source: string;
   score: number;
+  addressKey?: string | null;
 }
 
 export interface AdapterCtx {

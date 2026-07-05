@@ -26,4 +26,12 @@ describe("processListings", () => {
     ]);
     expect(out[0].externalId).toBe("cheap-campus");
   });
+  it("stamps an address key from title + postalcode", () => {
+    const out = processListings("roomspot", [
+      raw("with-number", { title: "Matenweg 14 208, Enschede", postalcode: "7522 LH" }),
+      raw("no-number", { title: "Spelbergsweg, Enschede", postalcode: "7522 AB" }),
+    ]);
+    expect(out.find((l) => l.externalId === "with-number")!.addressKey).toBe("7522lh-matenweg-14-208");
+    expect(out.find((l) => l.externalId === "no-number")!.addressKey).toBeNull();
+  });
 });

@@ -12,7 +12,7 @@ export interface ListingRow {
   source: string; external_id: string; url: string; title: string;
   price: number | null; bills: string; type: string; furnished: string;
   area: string | null; postalcode: string | null; available_from: string | null;
-  score: number; contact: unknown; raw: unknown;
+  score: number; contact: unknown; raw: unknown; address_key: string | null;
 }
 
 function toRow(l: Listing): ListingRow {
@@ -20,7 +20,7 @@ function toRow(l: Listing): ListingRow {
     source: l.source, external_id: l.externalId, url: l.url, title: l.title,
     price: l.price, bills: l.bills, type: l.type, furnished: l.furnished,
     area: l.area, postalcode: l.postalcode, available_from: l.availableFrom,
-    score: l.score, contact: l.contact, raw: l.raw,
+    score: l.score, contact: l.contact, raw: l.raw, address_key: l.addressKey ?? null,
   };
 }
 
