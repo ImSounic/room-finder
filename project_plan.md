@@ -51,9 +51,9 @@ Adapter architecture: every source is one self-contained module implementing a c
 |---|---|---|---|---|
 | 1 | **Roomspot.nl** (De Veste / Veste Wonen — Twente student housing; verify exact domain/flow against live site as first implementation step) | 1 | Playwright (login as Sounic — legitimate registered tenant) | **Auto-respond** (Phase 3). Response model is queue/points-based, so responding promptly to every match is the correct strategy. |
 | 2 | **Pararius.nl** | 1 | Plain HTTP + HTML parse (public, no login) | No on-site apply → **scrape agent name/phone/email + listing URL**, surface in alert + dashboard. Optional Phase 3: templated email via Gmail. |
-| 3 | **HousingAnywhere.com** | 2 | HTTP (site exposes JSON search endpoints; fall back to Playwright) | Contact scraping; on-platform messaging requires account — evaluate in Phase 3. |
-| 4 | **Kamernet.nl** | 2 | Playwright (Cloudflare anti-bot; may need stealth settings; accept fragility) | **Alert + contact-scrape only.** No auto-apply (paid account, ToS ban risk). |
-| 5 | **Kamer.nl** | 2 | HTTP or Playwright (assess) | Contact scraping. |
+| 3 | **HousingAnywhere.com** | ✅ live | HTTP (embedded router-hydration JSON) | Contact via cross-reference only (on-platform messaging not scraped). |
+| 4 | **Kamernet.nl** | ✅ live | HTTP (embedded __NEXT_DATA__ JSON; Playwright fallback if blocked) | Alert-only; contact via address cross-reference to free sources (paywall never scraped). |
+| 5 | **Kamer.nl** | ✅ live | Playwright (Cloudflare TLS-fingerprints plain HTTP) | Enschede-only filter; mostly whole houses over budget. |
 | 6 | **Facebook groups** (Rooms/Housing Enschede groups) | 3 | Playwright with saved session cookies, **read-only**, conservative rate (every 30–60 min) | **Monitor-only — never auto-message.** Alert links straight to the post; Sounic replies personally. Protects his account. |
 | 7 | **Funda.nl** (rentals) | 3 (optional) | Playwright (anti-bot) | Contact scraping. Low priority (mostly sales, few rentals in budget). |
 
