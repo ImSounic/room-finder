@@ -10,6 +10,7 @@ export async function middleware(req: NextRequest) {
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (toSet: Array<{ name: string; value: string; options?: any }>) => {
+          // req-side mirror needs no cookie options; the browser gets them via res.cookies below
           toSet.forEach(({ name, value }) => req.cookies.set(name, value));
           res = NextResponse.next({ request: req });
           toSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
@@ -25,6 +26,7 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
+// Exclusions are $-anchored: only these exact static files skip the auth gate.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icon.png).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico$|sw\\.js$|manifest\\.webmanifest$|icon\\.png$).*)"],
 };
