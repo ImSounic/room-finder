@@ -69,6 +69,12 @@ export function ListingCard({ listing, fresh = false, twin = null }: { listing: 
           <dt className="sr-only">type</dt>
           <dd className="rounded-md bg-surface px-1.5 py-0.5 font-medium text-ink">{listing.type}</dd>
         </div>
+        {!listing.is_match && (
+          <div className="inline-flex items-center gap-1">
+            <dt className="sr-only">match</dt>
+            <dd className="rounded-md bg-surface-2 px-1.5 py-0.5">outside criteria</dd>
+          </div>
+        )}
         {listing.furnished !== "unknown" && (
           <div className="inline-flex items-center gap-1">
             <dt className="sr-only">furnished</dt>

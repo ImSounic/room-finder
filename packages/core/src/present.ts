@@ -6,7 +6,16 @@ export interface ListingView {
   price: number | null; bills: Bills; type: UnitType; furnished: Furnished;
   area: string | null; postalcode: string | null; available_from: string | null;
   score: number; contact: Contact | null; status: string; first_seen_at: string;
-  address_key: string | null;
+  address_key: string | null; is_match: boolean;
+}
+
+export type TypeCategory = "all" | "studio" | "shared" | "other";
+
+/** Studio tab = self-contained-ish (the user's target); Shared = shared rooms; Other = unclassified. */
+export function typeCategory(t: UnitType): Exclude<TypeCategory, "all"> {
+  if (t === "studio" || t === "apartment" || t === "room-private-bath") return "studio";
+  if (t === "room-shared") return "shared";
+  return "other";
 }
 
 export function priceLabel(l: ListingView): string {
@@ -16,13 +25,14 @@ export function priceLabel(l: ListingView): string {
   return `€${l.price}`;
 }
 
-export interface ListingFilter { source?: string; minScore?: number; hideDismissed?: boolean; }
+export interface ListingFilter { source?: string; minScore?: number; hideDismissed?: boolean; category?: TypeCategory; }
 
 export function sortAndFilter(rows: ListingView[], f: ListingFilter): ListingView[] {
   return rows
     .filter((r) => (f.source ? r.source === f.source : true))
     .filter((r) => (f.minScore != null ? r.score >= f.minScore : true))
     .filter((r) => (f.hideDismissed ? r.status !== "dismissed" : true))
+    .filter((r) => (f.category && f.category !== "all" ? typeCategory(r.type) === f.category : true))
     .sort((a, b) => b.score - a.score || b.first_seen_at.localeCompare(a.first_seen_at));
 }
 

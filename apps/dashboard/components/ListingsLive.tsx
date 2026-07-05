@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { sortAndFilter, linkByAddress, type ListingView, type ListingFilter } from "@rf/core";
+import { sortAndFilter, linkByAddress, typeCategory, type ListingView, type ListingFilter } from "@rf/core";
 import { ListingCard } from "./ListingCard";
 
 const SCORE_STEPS = [
@@ -10,9 +10,16 @@ const SCORE_STEPS = [
   { value: 80, label: "80+" },
 ] as const;
 
+const CATEGORIES = [
+  { value: "all", label: "All" },
+  { value: "studio", label: "Studios" },
+  { value: "shared", label: "Shared" },
+  { value: "other", label: "Other" },
+] as const;
+
 export function ListingsLive({ initial }: { initial: ListingView[] }) {
   const [rows, setRows] = useState<ListingView[]>(initial);
-  const [filter, setFilter] = useState<ListingFilter>({ hideDismissed: true });
+  const [filter, setFilter] = useState<ListingFilter>({ hideDismissed: true, category: "all" });
   // Ids that arrived via realtime this session — they get the arrival animation.
   const freshIds = useRef<Set<string>>(new Set());
 
@@ -33,6 +40,13 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
   }, []);
 
   const sources = useMemo(() => [...new Set(rows.map((r) => r.source))].sort(), [rows]);
+  // Tab counts reflect hideDismissed only — not category/score/source — so each tab shows what's inside it before secondary filters narrow things further.
+  const categoryCounts = useMemo(() => {
+    const base = sortAndFilter(rows, { hideDismissed: filter.hideDismissed });
+    const counts: Record<(typeof CATEGORIES)[number]["value"], number> = { all: base.length, studio: 0, shared: 0, other: 0 };
+    for (const r of base) counts[typeCategory(r.type)]++;
+    return counts;
+  }, [rows, filter.hideDismissed]);
   const view = useMemo(() => sortAndFilter(rows, filter), [rows, filter]);
   const twins = useMemo(() => {
     const m = new Map<string, ListingView>();
@@ -45,6 +59,22 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-16 pt-2">
+      {/* Type-category tabs — primary navigation, bigger and full-width so it reads as the top-level split */}
+      <div role="group" aria-label="listing type" className="mb-3 flex rounded-(--radius-control) border border-line bg-surface p-1">
+        {CATEGORIES.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setFilter((f) => ({ ...f, category: value }))}
+            aria-pressed={(filter.category ?? "all") === value}
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-colors duration-150 ${
+              (filter.category ?? "all") === value ? "bg-bg text-ink shadow-(--shadow-card)" : "text-muted hover:text-ink"
+            }`}
+          >
+            {label} ({categoryCounts[value]})
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {/* Score steps as segmented pills — the filter used most, one tap away */}
         <div role="group" aria-label="minimum score" className="flex rounded-(--radius-control) border border-line bg-surface p-0.5">
@@ -95,7 +125,7 @@ export function ListingsLive({ initial }: { initial: ListingView[] }) {
           <p className="mt-1 text-sm text-muted">
             The scrapers check Roomspot every 5 minutes and Pararius every 15 —
             new matches appear here instantly and ping your phone.
-            {filter.minScore || filter.source ? " Try loosening the filters above." : ""}
+            {filter.minScore || filter.source || (filter.category && filter.category !== "all") ? " Try loosening the filters above." : ""}
           </p>
         </div>
       ) : (

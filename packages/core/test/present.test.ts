@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { priceLabel, sortAndFilter, computeSourceHealth, type ListingView } from "../src/present.js";
+import { priceLabel, sortAndFilter, computeSourceHealth, typeCategory, type ListingView } from "../src/present.js";
 
 const v = (over: Partial<ListingView> = {}): ListingView => ({
   id: "1", source: "roomspot", url: "u", title: "t", price: 700, bills: "incl",
   type: "studio", furnished: "yes", area: "Calslaan", postalcode: null,
   available_from: null, score: 80, contact: null, status: "new", first_seen_at: "2026-07-05T10:00:00Z",
-  address_key: null, ...over,
+  address_key: null, is_match: true, ...over,
 });
 
 describe("ListingView shape", () => {
@@ -44,6 +44,28 @@ describe("sortAndFilter", () => {
     const before = rows.map((r) => r.id);
     sortAndFilter(rows, {});
     expect(rows.map((r) => r.id)).toEqual(before);
+  });
+
+  const catRows = [
+    v({ id: "s", type: "studio" }),
+    v({ id: "r", type: "room-shared" }),
+    v({ id: "u", type: "unknown" }),
+  ];
+  it("filters by type category", () => {
+    expect(sortAndFilter(catRows, { category: "shared" }).map((r) => r.id)).toEqual(["r"]);
+  });
+  it("keeps all rows when category is all", () => {
+    expect(sortAndFilter(catRows, { category: "all" }).map((r) => r.id).sort()).toEqual(["r", "s", "u"]);
+  });
+});
+
+describe("typeCategory", () => {
+  it("buckets types into tabs", () => {
+    expect(typeCategory("studio")).toBe("studio");
+    expect(typeCategory("apartment")).toBe("studio");
+    expect(typeCategory("room-private-bath")).toBe("studio");
+    expect(typeCategory("room-shared")).toBe("shared");
+    expect(typeCategory("unknown")).toBe("other");
   });
 });
 
