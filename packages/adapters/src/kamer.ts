@@ -31,6 +31,9 @@ export function parseKamer(html: string): RawListing[] {
       // Some cards lazy-load and only populate data-href, not href.
       const href = link.attr("href") || link.attr("data-href");
       if (!href) return; // junk/promo card without a listing link
+      // Search results include nearby-city suggestions (Hengelo, Losser, …) — keep Enschede only.
+      const cityMatch = href.match(/huurwoning-([^/]+)/);
+      if ((cityMatch?.[1] ?? "").toLowerCase() !== "enschede") return;
       let url: string;
       try {
         url = new URL(href, BASE).toString();

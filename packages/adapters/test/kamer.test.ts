@@ -19,6 +19,12 @@ describe("parseKamer", () => {
     expect(priced.length).toBeGreaterThanOrEqual(listings.length / 2);
     for (const l of priced) expect(l.price).toBeGreaterThan(100);
   });
+  it("keeps only Enschede listings (drops nearby-city suggestion cards)", () => {
+    expect(listings.length).toBeGreaterThan(0);
+    for (const l of listings) {
+      expect(l.url).toMatch(/\/huren\/huurwoning-enschede\//);
+    }
+  });
 });
 
 describe("defensive parsing", () => {
