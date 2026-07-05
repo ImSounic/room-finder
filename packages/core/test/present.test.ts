@@ -1,0 +1,61 @@
+import { describe, it, expect } from "vitest";
+import { priceLabel, sortAndFilter, computeSourceHealth, type ListingView } from "../src/present.js";
+
+const v = (over: Partial<ListingView> = {}): ListingView => ({
+  id: "1", source: "roomspot", url: "u", title: "t", price: 700, bills: "incl",
+  type: "studio", furnished: "yes", area: "Calslaan", postalcode: null,
+  available_from: null, score: 80, contact: null, status: "new", first_seen_at: "2026-07-05T10:00:00Z", ...over,
+});
+
+describe("priceLabel", () => {
+  it("formats price with bills, and handles null", () => {
+    expect(priceLabel(v({ price: 650, bills: "incl" }))).toBe("€650 incl.");
+    expect(priceLabel(v({ price: 650, bills: "excl" }))).toBe("€650 excl.");
+    expect(priceLabel(v({ price: 650, bills: "unknown" }))).toBe("€650");
+    expect(priceLabel(v({ price: null }))).toBe("price ?");
+  });
+});
+
+describe("sortAndFilter", () => {
+  const rows = [v({ id: "a", score: 60, source: "pararius", status: "new" }),
+                v({ id: "b", score: 90, source: "roomspot", status: "new" }),
+                v({ id: "c", score: 75, source: "roomspot", status: "dismissed" })];
+  it("sorts by score desc by default", () => {
+    expect(sortAndFilter(rows, {}).map((r) => r.id)).toEqual(["b", "c", "a"]);
+  });
+  it("filters by source", () => {
+    expect(sortAndFilter(rows, { source: "roomspot" }).map((r) => r.id)).toEqual(["b", "c"]);
+  });
+  it("filters by min score", () => {
+    expect(sortAndFilter(rows, { minScore: 70 }).map((r) => r.id)).toEqual(["b", "c"]);
+  });
+  it("hides dismissed when hideDismissed", () => {
+    expect(sortAndFilter(rows, { hideDismissed: true }).map((r) => r.id)).toEqual(["b", "a"]);
+  });
+  it("does not mutate the input array", () => {
+    const before = rows.map((r) => r.id);
+    sortAndFilter(rows, {});
+    expect(rows.map((r) => r.id)).toEqual(before);
+  });
+});
+
+describe("computeSourceHealth", () => {
+  it("marks a source ok on recent ok run, broken on failure", () => {
+    const runs = [
+      { source: "roomspot", ok: true, total_found: 5, new_matches: 0, ran_at: "2026-07-05T10:00:00Z" },
+      { source: "pararius", ok: false, total_found: 0, new_matches: 0, ran_at: "2026-07-05T09:55:00Z" },
+    ];
+    const h = computeSourceHealth(runs);
+    expect(h.find((x) => x.source === "roomspot")!.ok).toBe(true);
+    expect(h.find((x) => x.source === "pararius")!.ok).toBe(false);
+  });
+  it("keeps only the latest run per source", () => {
+    const runs = [
+      { source: "roomspot", ok: false, total_found: 0, new_matches: 0, ran_at: "2026-07-05T09:00:00Z" },
+      { source: "roomspot", ok: true, total_found: 5, new_matches: 1, ran_at: "2026-07-05T10:00:00Z" },
+    ];
+    const h = computeSourceHealth(runs);
+    expect(h.length).toBe(1);
+    expect(h[0].ok).toBe(true);
+  });
+});
