@@ -7,7 +7,8 @@
     "typecheck": "tsc -b packages/core packages/adapters packages/notifier packages/scraper",
     "scrape": "node --env-file=.env packages/scraper/dist/run.js",
     "build": "tsc -b packages/core packages/adapters packages/notifier packages/scraper",
-    "smoke": "npm run build && node packages/scraper/dist/smoke.js"
+    "smoke": "npm run build && node packages/scraper/dist/smoke.js",
+    "fb:login": "node scripts/fb-login.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
