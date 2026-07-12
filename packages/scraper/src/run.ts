@@ -2,7 +2,7 @@ import { parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter 
 import { buildAlertPayload, sendDiscord, buildPushPayload, sendPush, deadEndpoints } from "@rf/notifier";
 import {
   insertNewListings,
-  isSourceUnhealthy,
+  justBecameUnhealthy,
   logSourceRun,
   supabaseFromEnv,
   getActivePushSubscriptions,
@@ -105,8 +105,8 @@ for (const adapter of adapters) {
       total_found: 0, new_matches: 0, error: msg.slice(0, 500) });
   }
   try {
-    if (await isSourceUnhealthy(db, adapter.name)) {
-      await sendDiscord({ content: `⚠️ **${adapter.name}** returned nothing/failed 3 runs in a row — adapter may be broken.` })
+    if (await justBecameUnhealthy(db, adapter.name)) {
+      await sendDiscord({ content: `⚠️ **${adapter.name}** has failed 3 runs in a row — check the adapter.` })
         .catch(() => {});
     }
   } catch (err) {

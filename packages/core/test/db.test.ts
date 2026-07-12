@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { insertNewListings, isSourceUnhealthy, existingExternalIds } from "../src/db.js";
+import { insertNewListings, justBecameUnhealthy, existingExternalIds } from "../src/db.js";
 import type { Listing } from "../src/types.js";
 
 const l = (id: string, addressKey?: string | null): Listing => ({
@@ -131,49 +131,67 @@ describe("existingExternalIds", () => {
   });
 });
 
-describe("isSourceUnhealthy", () => {
+describe("justBecameUnhealthy", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns false when n <= 0", async () => {
-    const fakeDb = {
+  function fakeRunsDb(rows: { ok: boolean; total_found?: number }[] | null, error: { message: string } | null = null) {
+    return {
       from: () => ({
         select: () => ({
           eq: () => ({
             order: () => ({
-              limit: () => Promise.resolve({
-                data: [],
-                error: null,
-              }),
+              limit: (_n: number) => Promise.resolve({ data: rows, error }),
             }),
           }),
         }),
       }),
     };
-    const result = await isSourceUnhealthy(fakeDb as never, "test", 0);
+  }
+
+  it("returns false when n <= 0", async () => {
+    const fakeDb = fakeRunsDb([]);
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 0);
     expect(result).toBe(false);
   });
 
   it("returns false and logs when the query errors", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fakeDb = {
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            order: () => ({
-              limit: () => Promise.resolve({
-                data: null,
-                error: { message: "boom" },
-              }),
-            }),
-          }),
-        }),
-      }),
-    };
-    const result = await isSourceUnhealthy(fakeDb as never, "test", 3);
+    const fakeDb = fakeRunsDb(null, { message: "boom" });
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
     expect(result).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalledWith("source_runs query failed: boom");
+    expect(consoleErrorSpy).toHaveBeenCalledWith("justBecameUnhealthy query failed: boom");
     consoleErrorSpy.mockRestore();
+  });
+
+  it("returns false when there are fewer than n runs (not enough data)", async () => {
+    const fakeDb = fakeRunsDb([{ ok: false }, { ok: false }]); // only 2 rows, n=3
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(false);
+  });
+
+  it("returns true when the last n runs all failed and the prior run was ok (transition fires)", async () => {
+    const fakeDb = fakeRunsDb([{ ok: false }, { ok: false }, { ok: false }, { ok: true }]);
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(true);
+  });
+
+  it("returns false when the last n runs all failed but the prior run also failed (already alerted, no re-spam)", async () => {
+    const fakeDb = fakeRunsDb([{ ok: false }, { ok: false }, { ok: false }, { ok: false }]);
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(false);
+  });
+
+  it("returns true when the last n runs all failed and there is no prior run (first outage, exactly n rows)", async () => {
+    const fakeDb = fakeRunsDb([{ ok: false }, { ok: false }, { ok: false }]);
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(true);
+  });
+
+  it("returns false for a successful empty run (ok:true, total_found:0) among the recent n — the HA case", async () => {
+    const fakeDb = fakeRunsDb([{ ok: true, total_found: 0 }, { ok: false }, { ok: false }, { ok: true }]);
+    const result = await justBecameUnhealthy(fakeDb as never, "test", 3);
+    expect(result).toBe(false);
   });
 });

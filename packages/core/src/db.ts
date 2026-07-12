@@ -59,14 +59,21 @@ export async function logSourceRun(db: SupabaseClient, run: {
   if (error) console.error(`source_runs insert failed: ${error.message}`);
 }
 
-/** True if the last `n` runs for this source all failed or found 0 listings. */
-export async function isSourceUnhealthy(db: SupabaseClient, source: string, n = 3): Promise<boolean> {
+/** True only at the MOMENT a source crosses into failure: the last `n` runs all errored
+ *  (ok === false) AND the run just before that streak was ok (or there is no earlier run).
+ *  A successful run that found 0 listings is healthy — some sources are legitimately empty,
+ *  so total_found is intentionally ignored here. Edge-triggered so we warn once per outage,
+ *  not every cron tick. */
+export async function justBecameUnhealthy(db: SupabaseClient, source: string, n = 3): Promise<boolean> {
   if (n <= 0) return false;
-  const { data, error } = await db.from("source_runs").select("ok,total_found")
-    .eq("source", source).order("ran_at", { ascending: false }).limit(n);
-  if (error) { console.error(`source_runs query failed: ${error.message}`); return false; }
+  const { data, error } = await db.from("source_runs").select("ok,ran_at")
+    .eq("source", source).order("ran_at", { ascending: false }).limit(n + 1);
+  if (error) { console.error(`justBecameUnhealthy query failed: ${error.message}`); return false; }
   if (!data || data.length < n) return false;
-  return data.every((r) => !r.ok || r.total_found === 0);
+  const recent = data.slice(0, n);
+  if (!recent.every((r) => (r as { ok: boolean }).ok === false)) return false; // need n consecutive failures
+  const prior = data[n] as { ok: boolean } | undefined;                        // run just before the streak
+  return !prior || prior.ok === true;                                          // fire only on the transition
 }
 
 export async function getActivePushSubscriptions(db: SupabaseClient): Promise<{ endpoint: string; keys: { p256dh: string; auth: string } }[]> {
