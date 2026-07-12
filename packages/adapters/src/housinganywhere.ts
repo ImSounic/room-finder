@@ -227,6 +227,7 @@ export function parseHousingAnywhere(html: string): RawListing[] {
 export const housingAnywhereAdapter: SourceAdapter = {
   name: "housinganywhere",
   kind: "http",
+  venue: "cloud",
   async fetchListings(ctx) {
     const res = await ctx.fetch(SEARCH_URL, { headers: { "User-Agent": UA } });
     if (!res.ok) throw new Error(`housinganywhere HTTP ${res.status}`);

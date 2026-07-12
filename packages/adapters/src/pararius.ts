@@ -148,6 +148,7 @@ async function fetchSearchHtml(url: string, selector: string): Promise<string> {
 export const parariusAdapter: SourceAdapter = {
   name: "pararius",
   kind: "browser",
+  venue: "local",
   async fetchListings() {
     const html = await fetchSearchHtml(SEARCH_URL, "section.listing-search-item");
     return parsePararius(html);

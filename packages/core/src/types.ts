@@ -40,6 +40,7 @@ export interface AdapterCtx {
 export interface SourceAdapter {
   name: string;
   kind: "http" | "browser";
+  venue: "cloud" | "local";
   fetchListings(ctx: AdapterCtx): Promise<RawListing[]>;
   /** Optional: enrich listings (e.g. fetch detail pages for contact info)
    *  before they're inserted. Called once per listing — only for listings

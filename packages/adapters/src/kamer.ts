@@ -179,6 +179,7 @@ async function fetchSearchHtml(url: string, selector: string): Promise<string> {
 export const kamerAdapter: SourceAdapter = {
   name: "kamer",
   kind: "browser",
+  venue: "local",
   async fetchListings() {
     const html = await fetchSearchHtml(SEARCH_URL, ".search-results-list div.group[id]");
     return parseKamer(html);

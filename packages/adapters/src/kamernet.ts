@@ -225,6 +225,7 @@ export async function enrichKamernetListings(listings: Listing[], limit = 30): P
 export const kamernetAdapter: SourceAdapter = {
   name: "kamernet",
   kind: "browser",
+  venue: "local",
   async fetchListings(ctx) {
     const res = await ctx.fetch(SEARCH, { headers: { "User-Agent": UA } });
     if (!res.ok) throw new Error(`kamernet HTTP ${res.status}`);

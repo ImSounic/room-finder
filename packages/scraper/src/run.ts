@@ -17,9 +17,9 @@ const ALERT_DELAY_MS = 350;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const ALL: SourceAdapter[] = [parariusAdapter, kamernetAdapter, kamerAdapter, housingAnywhereAdapter];
-const laneIdx = process.argv.indexOf("--lane");
-const lane = laneIdx !== -1 ? process.argv[laneIdx + 1] : null; // 'http' | 'browser' | null = all
-const adapters = lane ? ALL.filter((a) => a.kind === lane) : ALL;
+const venueIdx = process.argv.indexOf("--venue");
+const venue = venueIdx !== -1 ? process.argv[venueIdx + 1] : null; // 'cloud' | 'local' | null = all
+const adapters = venue ? ALL.filter((a) => a.venue === venue) : ALL;
 
 let db;
 try {
